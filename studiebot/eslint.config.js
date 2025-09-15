@@ -1,4 +1,4 @@
-import nextPlugin from 'eslint-plugin-next'
+import nextPlugin from '@next/eslint-plugin-next'
 
 export default [
   nextPlugin.configs["core-web-vitals"],
