@@ -301,7 +301,12 @@ function ChatPanel({ mode, context, richEmoji }) {
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
   const listRef = useRef(null)
-  useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    else el.scrollTop = el.scrollHeight
+  }, [messages])
 
   useEffect(() => {
     setMessages([])
