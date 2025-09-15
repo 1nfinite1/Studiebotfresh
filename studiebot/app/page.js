@@ -8,6 +8,21 @@ const YEARS = ['1', '2', '3', '4', '5', '6']
 
 const defaultGuidance = { leren: '', overhoren: '', oefentoets: '' }
 
+// Runtime backend URL helper
+async function apiFetch(path, options) {
+  if (!apiFetch.baseResolved) {
+    try {
+      const r = await fetch('/runtime-config')
+      if (r.ok) { const j = await r.json(); apiFetch.base = j?.backendUrl || '' }
+      else { apiFetch.base = process.env.NEXT_PUBLIC_BACKEND_URL || '' }
+    } catch { apiFetch.base = process.env.NEXT_PUBLIC_BACKEND_URL || '' }
+    apiFetch.baseResolved = true
+  }
+  const base = apiFetch.base || ''
+  const url = `${base}${path}`
+  return fetch(url, options)
+}
+
 const IconBack = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 )
@@ -158,7 +173,7 @@ function MaterialsAdmin() {
     setLoading(true)
     try {
       const url = `/api/materials/list?vak=${encodeURIComponent(vak)}&leerjaar=${encodeURIComponent(leerjaar)}&hoofdstuk=${encodeURIComponent(hoofdstuk)}`
-      const res = await fetch(url)
+      const res = await apiFetch(url)
       const data = await res.json()
       setItems(data?.data?.items || [])
       setSetInfo(data?.data?.set || null)
@@ -181,7 +196,7 @@ function MaterialsAdmin() {
       fd.append('leerjaar', leerjaar)
       fd.append('hoofdstuk', hoofdstuk)
       fd.append('uploader', 'docent')
-      const res = await fetch('/api/materials/upload', { method: 'POST', body: fd })
+      const res = await apiFetch('/api/materials/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Upload mislukt')
       const segCount = data?.data?.item?.segmentCount ?? data?.data?.segmentCount ?? 0
@@ -192,7 +207,7 @@ function MaterialsAdmin() {
 
   const onActivate = async () => {
     try {
-      const res = await fetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vak, leerjaar, hoofdstuk }) })
+      const res = await apiFetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vak, leerjaar, hoofdstuk }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Activeren mislukt')
       setMsg('Actief gemaakt')
@@ -203,7 +218,7 @@ function MaterialsAdmin() {
   const onDelete = async (id) => {
     if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) return
     try {
-      const res = await fetch(`/api/materials/item?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/materials/item?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Verwijderen mislukt')
       await refresh()
@@ -212,7 +227,7 @@ function MaterialsAdmin() {
 
   const onPreview = async (id) => {
     try {
-      const res = await fetch(`/api/materials/preview?id=${encodeURIComponent(id)}`)
+      const res = await apiFetch(`/api/materials/preview?id=${encodeURIComponent(id)}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Preview mislukt')
       const text = Array.isArray(data?.data?.segments) ? data.data.segments.join('\n\n') : data?.data?.preview || ''
@@ -224,7 +239,7 @@ function MaterialsAdmin() {
     if (!seedText.trim()) { alert('Plak eerst tekst'); return }
     setLoading(true); setMsg('Bezig met seeden…')
     try {
-      const res = await fetch('/api/materials/seed-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vak, leerjaar, hoofdstuk, text: seedText }) })
+      const res = await apiFetch('/api/materials/seed-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vak, leerjaar, hoofdstuk, text: seedText }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Seed mislukt')
       const segCount = data?.data?.segmentCount ?? 0
@@ -364,146 +379,6 @@ function ChatPanel({ mode, context, richEmoji }) {
         <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={mode === 'Overhoren' ? 'Typ je antwoord…' : 'Stel je vraag…'} className="h-20 flex-1 resize-none rounded-xl border border-white/20 bg-white/90 p-3 text-purple-800 outline-none placeholder:text-purple-300 focus:ring-2 focus:ring-purple-300" />
         <button onClick={send} className="h-20 rounded-xl bg-white px-4 font-semibold text-purple-700 hover:bg-purple-100">Sturen</button>
       </div>
-    </div>
-  )
-}
-
-function OefentoetsPanel({ context, onSwitchToOverhoren, richEmoji }) {
-  const [started, setStarted] = useState(false)
-  const [count, setCount] = useState(5)
-  const [questions, setQuestions] = useState([])
-  const [answers, setAnswers] = useState({})
-  const [submitting, setSubmitting] = useState(false)
-  const [report, setReport] = useState(null)
-  const [serverMsg, setServerMsg] = useState('')
-  const [loadingStart, setLoadingStart] = useState(false)
-  const [openRows, setOpenRows] = useState({})
-
-  const start = async () => {
-    setStarted(true); setReport(null); setAnswers({}); setLoadingStart(true)
-    try {
-      const base = `${context.vak || 'Onderwerp'} — hoofdstuk ${context.hoofdstuk || '1'}`
-      const qs = Array.from({ length: count }).map((_, i) => ({ id: String(i+1), text: `${base}: vraag ${i+1}` }))
-      setQuestions(qs)
-      setServerMsg('(LLM not configured) Voorbeeldvragen gegenereerd.')
-    } catch { setServerMsg('Kon de oefentoets niet starten. Probeer opnieuw.') } finally { setLoadingStart(false) }
-  }
-
-  const submit = async () => {
-    const empty = questions.filter((q) => !(answers[q.id]||'').trim())
-    if (empty.length > 0) { const ok = window.confirm(`Vraag ${questions.findIndex((q) => !(answers[q.id]||'').trim()) + 1} lijkt nog niet helemaal volledig. Weet je zeker dat je de toets wil inleveren?`); if (!ok) return }
-    setSubmitting(true)
-    try {
-      const llm = getLLMClient()
-      const { score, feedback, notice } = await llm.gradeQuiz({ answers })
-      const total = questions.length
-      const correctCount = Math.max(0, Math.min(total, score))
-      const pct = Math.round((correctCount / Math.max(1,total)) * 100)
-      const grade = Math.max(1, Math.min(10, (pct >= 70 ? 5.5 + (pct-70)*0.15 : 1 + pct*0.06)))
-      const results = questions.map((q, idx) => ({ id: q.id, text: q.text, answer: answers[q.id] || '', correct: idx < correctCount, feedback: feedback[idx % feedback.length] || '' }))
-      setServerMsg(notice ? `(${notice})` : '')
-      setReport({ correctCount, total, pct, grade, summary: 'Voorbeeldrapport (UI-only).', recommendations: ['Herhaal de kernbegrippen', 'Oefen oude vragen'], results })
-    } catch { setServerMsg('Inleveren mislukt. Probeer opnieuw.') } finally { setSubmitting(false) }
-  }
-
-  const wrongFocus = useMemo(() => report?.results?.filter(r => !r.correct).map(r => r.text).slice(0,3) || [], [report])
-
-  return (
-    <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
-      {!started && (
-        <div className="space-y-3">
-          <p className="text-white/90">Kies het aantal vragen en start de oefentoets.</p>
-          <div className="flex gap-2">{[5, 10].map((n) => (<button key={n} onClick={() => setCount(n)} className={`rounded-xl px-4 py-2 font-semibold ring-1 ring-white/30 ${count === n ? 'bg-white text-purple-700' : 'bg-white/10 text-white hover:bg-white/20'}`}>{n} vragen</button>))}</div>
-          <button onClick={start} className="w-full rounded-xl bg-white py-3 font-semibold text-purple-700 hover:bg-purple-100">Start oefentoets</button>
-          {loadingStart && (
-            <div className="mt-2 max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed bg-white/15 text-white">
-              <span className="typing-dots" aria-live="polite" aria-label="Oefentoets wordt klaargezet">
-                <span className="dot"></span>
-                <span className="dot"></span>
-                <span className="dot"></span>
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {started && !report && (
-        <div className="space-y-4">
-          {serverMsg && <p className="text-white/80">{serverMsg}</p>}
-          {questions.map((q) => (
-            <div key={q.id} className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
-              <p className="mb-2 font-semibold text-white">{q.text}</p>
-              <textarea value={answers[q.id] || ''} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className="h-24 w-full resize-none rounded-lg border border-white/20 bg-white/90 p-2 text-purple-800 outline-none focus:ring-2 focus:ring-purple-300" placeholder="Jouw antwoord…" />
-            </div>
-          ))}
-          <button onClick={submit} disabled={submitting} className="w-full rounded-xl bg-white py-3 font-semibold text-purple-700 hover:bg-purple-100 disabled:opacity-60">{submitting ? 'Bezig met nakijken…' : 'Inleveren'}</button>
-          {submitting && (
-            <div className="mt-2 max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed bg-white/15 text-white">
-              <span className="typing-dots" aria-live="polite" aria-label="Antwoorden worden nagekeken">
-                <span className="dot"></span>
-                <span className="dot"></span>
-                <span className="dot"></span>
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {report && (
-        <div className="space-y-4">
-          <div className="rounded-xl bg-white p-4 text-purple-800 shadow ring-1 ring-purple-200">
-            <div className="mb-2 flex items-center gap-2 text-lg font-semibold">
-              <span className="select-none">🎓</span>
-              <span>Toetsrapport</span>
-            </div>
-            <p className="mb-1"><span className="font-semibold">📊 Score:</span> {report.correctCount}/{report.total} ({report.pct}%)</p>
-            <p className="mb-3"><span className="font-semibold">📝 Cijfer:</span> {report.grade.toFixed(1)}</p>
-            {serverMsg && <p className="mb-2 whitespace-pre-wrap">{serverMsg}</p>}
-            {report.summary && (
-              <p className="mb-2 whitespace-pre-wrap">💡 {report.summary}</p>
-            )}
-            {Array.isArray(report.recommendations) && report.recommendations.length > 0 && (
-              <ul className="mt-2 list-disc pl-6">
-                {report.recommendations.map((r, i) => (
-                  <li key={i} className="mb-1">✨ {r}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {report.results.map((r, idx) => {
-              const open = !!openRows[r.id]
-              const toggle = () => setOpenRows((o) => ({ ...o, [r.id]: !open }))
-              const icon = r.evaluation ? (r.evaluation === 'juist' ? '✅' : (r.evaluation === 'onvolledig' ? '🤔' : '❌')) : (r.correct ? '✅' : '❌')
-              return (
-                <div key={r.id} className="rounded-xl bg-white p-3 text-purple-800 shadow ring-1 ring-purple-200">
-                  <button onClick={toggle} className="flex w-full items-center justify-between text-left">
-                    <span className="flex items-center gap-2 font-semibold"><span className="select-none">{icon}</span> Vraag {idx + 1}</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
-                  {open && (
-                    <div className="mt-2 space-y-2 text-sm">
-                      <p className="font-semibold">{r.text}</p>
-                      {r.answer && (
-                        <p><span className="font-semibold">Jouw antwoord:</span> {r.answer}</p>
-                      )}
-                      <p><span className="font-semibold">Uitleg:</span> {r.feedback || (r.correct ? 'Goed beantwoord.' : 'Nog niet voldoende.')}</p>
-                      {r.model_answer && (
-                        <p><span className="font-semibold">Modelantwoord:</span> {r.model_answer}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {wrongFocus.length > 0 && (
-            <button onClick={() => onSwitchToOverhoren(wrongFocus)} className="w-full rounded-xl bg-white py-3 font-semibold text-purple-700 hover:bg-purple-100">Oefen nu met Overhoren op je fouten</button>
-          )}
-        </div>
-      )}
     </div>
   )
 }
