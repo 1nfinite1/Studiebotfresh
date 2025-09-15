@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import App from '../app/page'
+import App from '../app/page.jsx'
 
 beforeEach(() => {
   vi.stubGlobal('fetch', (url, opts) => {
