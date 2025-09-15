@@ -10,7 +10,8 @@
     "start": "next start",
     "test": "vitest run --reporter=verbose",
     "test:watch": "vitest",
-    "prebuild": "node scripts/scan-llm.js"
+    "prebuild": "node scripts/scan-llm.js",
+    "ci": "node scripts/scan-llm.js && vitest run --reporter=verbose && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -76,7 +77,6 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.2",
     "autoprefixer": "^10.4.19",
     "cross-env": "^10.0.0",
     "eslint": "^9.35.0",
