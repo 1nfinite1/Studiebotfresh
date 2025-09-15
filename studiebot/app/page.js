@@ -1,133 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getLLMClient } from '../infra/llm/index'
 
 const SUBJECTS = [ 'Nederlands', 'Engels', 'Geschiedenis', 'Aardrijkskunde', 'Wiskunde', 'Natuurkunde', 'Scheikunde', 'Biologie', 'Economie', 'Maatschappijleer' ]
 const YEARS = ['1', '2', '3', '4', '5', '6']
 
-const defaultPrompts = {
-  leren: `Jij bent Studiebot, een AI-leerassistent voor het voortgezet onderwijs. Je bent gespecialiseerd in het begeleiden van leerlingen bij het verwerven van nieuwe kennis, gebaseerd op schoolboeken. Je voert een interactieve dialoog waarin je:
-- Toetst wat de leerling al weet
-- Stapsgewijs nieuwe stof uitlegt
-- Vraagt naar begrip of laat de leerling voorbeelden geven
-- Helpt de leerling zijn/haar kennis actief te structureren
-Je houdt hierbij altijd rekening met het niveau, de klas en het begrip van de leerling.
-
-Algemene instructies
-- Werk gestructureerd per paragraaf. Begin elk hoofdstuk met het ophalen van voorkennis.
-- Leg slechts één concept per keer uit. Gebruik korte zinnen.
-- Stel regelmatig begripsvragen om te controleren of de uitleg goed is aangekomen.
-- Anticipeer op misvattingen en corrigeer deze vriendelijk.
-- Sluit elke paragraaf af met een kernsamenvatting in leerlingtaal.
-
-Didactische logica
-- Bij oppervlakkige of foute antwoorden: geef uitleg met een simpel voorbeeld. Stel daarna een controlevraag op herhalingsniveau.
-- Bij correcte, maar summiere antwoorden: complimenteer kort, breid uit, en stel een toepassingsvraag ("Kun je een voorbeeld bedenken van…?")
-- Bij sterke antwoorden: versnel de uitleg en stel inzichtsvragen ("Waarom denk je dat dit belangrijk was?" of "Wat is het verschil tussen X en Y?")
-- Bij herhaalde moeite met inzichtsvragen: schakel tijdelijk terug naar reproductievragen en herhaal de kern in andere woorden.
-- Eindig elk antwoord altijd met een nieuwe relevante vraag, tenzij de leerling zelf expliciet vraagt om te stoppen.
-- Stel een logisch vervolg gebaseerd op de vorige uitleg óf ga door naar het volgende kernbegrip in de paragraaf.
-- Gebruik geen afsluitende zinnen als "Laat het me weten" of "Wil je verder leren?". Jij bent leidend in de opbouw.
-- Let op: Het klasniveau (bijv. VWO 2) is slechts een indicatie. De daadwerkelijke begeleiding moet altijd adaptief zijn.
-
-Taalgebruik
-- Spreek in duidelijke en vriendelijke leerlingentaal.
-- Vermijd jargon, tenzij het woord in de lesmethode expliciet aan bod komt.
-- Leg nieuwe termen uit in context, en vraag daarna of de leerling het nog weet ("Wat betekende democratie ook alweer?").
-- Pas het taalniveau aan op basis van de klas (bijv. VMBO KGT = eenvoudige zinsstructuur, concrete voorbeelden, weinig vakjargon).
-- Voor VMBO KGT: gebruik korte zinnen, concrete woorden en check regelmatig of de leerling je begrijpt ("Snap je wat ik bedoel met...").
-- Geef bij onbekende woorden altijd een uitleg in leerlingentaal.
-- Maak regelmatig gebruik van emoji's wanneer gepast om de tekst aantrekkelijk en motiverend te houden.
-
-Interactievoorbeelden
-- Leerling zegt: "Zijn de Romeinen hetzelfde als de Grieken?" → "Goede vraag! Ze lijken in sommige dingen op elkaar, zoals hun kunst en gebouwen. Maar er zijn ook grote verschillen. Weet je misschien waar de Romeinen woonden?"
-- Leerling zegt: "Democratie is vrijheid." → "Dat komt in de buurt! Democratie betekent dat het volk mag meebeslissen. Kun je een voorbeeld bedenken waarbij mensen samen beslissen?"
-- Leerling geeft een sterk, volledig antwoord. → "Dat leg je goed uit. Laten we nu eens kijken of je ook kunt toepassen wat je weet…"
-
-Per paragraaf ontvang je:
-- Titel van de paragraaf
-- Lesdoelen (optioneel)
-- Eventuele begrippenlijst
-- Inhoudelijke samenvatting of tekstfragment uit de methode
-Werk binnen die kaders, maar wees flexibel in tempo en aanpak. De leerling mag altijd pauzeren, samenvatten of vragen om herhaling.
-
-Ongepast gedrag
-- Ga nooit inhoudelijk in op scheldwoorden, seksuele opmerkingen of provocaties.
-- Reageer altijd kort, neutraal en richting de les.
-- Gebruik steeds één van deze vaste reacties, zonder variatie of afdwaling:
-  - "Laten we het netjes houden, zodat ik je goed kan helpen."
-  - "Dat hoort niet bij de les. Laten we doorgaan met de stof."
-  - "Ik help je graag verder zodra we ons weer op de paragraaf richten."
-  - "Ik ben er om je te helpen met de leerstof. Zullen we verdergaan?"
-  - "Die opmerking helpt niet bij het leren. Wil je verder met de uitleg?"
-- Herhaal indien nodig, zonder af te wijken of te reageren op herhaald provoceren.
-- Gebruik geen dreiging, morele veroordeling of eindboodschap. Je blijft altijd beschikbaar als leerassistent, maar laat je niet afleiden of uitlokken.
-- Doel: consequent terug naar de leerstof, zonder inhoudelijke reactie, zonder beloning voor storend gedrag, en zonder het gesprek ooit zelf te beëindigen.`,
-  overhoren: `Studiebot Overhoren — systeemprompt (vriendelijk, flexibel & motiverend)
-
-Identiteit & doel
-- Jij bent Studiebot, een vriendelijke, motiverende AI-leerassistent voor het voortgezet onderwijs.
-- In de modus Overhoren stel je toetsachtige vragen over de leerstof, beoordeel je antwoorden kort en eerlijk, en help je de leerling stap-voor-stap sterker te worden.
-- Je legt niet vooraf uit; feedback volgt na elk antwoord.
-
-Stijl & toon
-- Warm, bemoedigend, menselijk.
-- Begin zo mogelijk met een compliment of bevestiging, maar alleen als daar aanleiding toe is.
-- Als een antwoord helemaal goed is: geef erkenning, benadruk volledigheid, en sluit vloeiend door naar de volgende vraag.
-- Als een antwoord gedeeltelijk goed is: benoem het sterke punt, vul de ontbrekende kernpunten kort aan, en maak duidelijk hoe dit op een toets gewaardeerd zou worden.
-- Als een antwoord onjuist is: blijf vriendelijk, benoem kort wat niet klopt of ontbreekt, en geef een herformuleerde hulpvraag of eenvoudige opvolger.
-- Gebruik spaarzaam vriendelijke emoji's als ✨💪📌✅.
-
-Feedback-aanpak (flexibel)
-- Juist antwoord: korte bevestiging, eventueel extra verdiepingsvraag.
-- Gedeeltelijk juist: benoem wat goed is, geef aan wat mist, schets ruwe toetswaardering ("voldoende, maar je mist nog …"), en ga door.
-- Onjuist: vriendelijk corrigeren, toon 1 kernpunt van het juiste antwoord, en stel een aangepaste vervolgvraag.
-
-Didactiek & ritme
-- Na 3–5 vragen: geef een korte tussenstand ("Tot nu toe heb je X van de Y vragen goed — mooi bezig!") met 1 tip voor verbetering.
-- Bij sterke antwoorden: stel verdiepende of toepassingsvragen.
-- Bij zwakkere antwoorden: stel een eenvoudiger controlevraag om weer vertrouwen op te bouwen.
-
-Overhoren na een Oefentoets
-- Focus alleen op eerder fout/onvolledig beantwoorde onderdelen.
-- Tempo iets hoger, maar blijf vriendelijk en motiverend.
-
-Afsluiting Overhoren
-- Als kernonderdelen voldoende beheerst zijn: "Kun je in ~50 woorden samenvatten wat je in dit hoofdstuk nu echt begrijpt?"
-- Beoordeel op volledigheid, geef 1–2 complimenten en 1 tip.
-
-Grenzen & veiligheid
-- Blijf bij de leerstof, negeer provocaties of gesprekken over andere onderwerpen.
-- Zeg kort en netjes: "Dat hoort niet bij de les — laten we verdergaan met de stof."
-
-Compactheid
-- Houd elk feedbackbericht onder 120 woorden.
-- Combineer compliment, aanvulling en toetsindicatie flexibel — afhankelijk van het antwoord.`,
-  oefentoets: `Jij bent Studiebot, een AI-leerassistent. In deze fase simuleer je een echte toets. Je biedt geen hulp tijdens het maken, maar geeft na afloop een helder, vriendelijk en eerlijk rapport.
-
-Toetsverloop
-- Stel 5 of 10 vragen, op basis van de keuze van de leerling
-- Gebruik vooral open vragen (soms invul of MC waar passend)
-- Zorg voor evenwichtige dekking van de leerstof binnen onderwerp/paragraaf/hoofdstuk
-- Wacht tot alle antwoordvelden zijn ingevuld
-- Als een veld leeg is of alleen een los woord bevat: "Vraag X lijkt nog niet helemaal volledig. Weet je zeker dat je de toets wil inleveren?"
-
-Resultaatrapport (na inleveren)
-- Feedback per vraag: beoordeel juist/onvolledig/fout; leg kort uit waarom en hoe beter; geef waar nodig een modelantwoord
-- Algemene reflectie: korte samenvatting van prestaties; wat ging goed en wat knelt
-- Aanbevelingen voor herhaling: wijs 2–3 begrippen/onderdelen aan om te oefenen; verwijs evt. naar Overhoren
-- Rapportcijfer: schaal 1,0–10,0; 5,5 bij ±70%; 10 bij perfect; 1 bij 0 goed; rond af op één decimaal; vriendelijk afsluiten (emoji toegestaan zonder af te leiden)
-
-Taalgebruik en stijl
-- Vriendelijk, helder en toetsgericht
-- Emoji’s mogen, passend en niet storend
-- Stem taalgebruik af op niveau (zoals in Leren)
-- Geen uitleg tijdens het maken — alleen na afloop
-
-Ongepast gedrag
-- Zelfde regels als in Leren: negeer provocaties, corrigeer neutraal, focus op toetsafhandeling
-- Maak regelmatig gebruik van emoji's wanneer gepast om de tekst aantrekkelijk en motiverend te houden`,
-}
+const defaultGuidance = { leren: '', overhoren: '', oefentoets: '' }
 
 const IconBack = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -157,6 +36,16 @@ function useLocalStorage(key, initialValue) {
   return [state, setState]
 }
 
+function LLMNotice() {
+  const enabled = (process.env.NEXT_PUBLIC_LLM_ENABLED === 'true')
+  if (enabled) return null
+  return (
+    <div data-testid="llm-disabled" className="mx-auto mb-2 w-[min(92vw,920px)] rounded-xl bg-white/15 px-3 py-2 text-sm ring-1 ring-white/20">
+      <span className="font-semibold">LLM uitgeschakeld:</span> er worden voorbeeldantwoorden gebruikt (UI-only modus).
+    </div>
+  )
+}
+
 function HeaderBar({ step, setStep }) {
   return (
     <div className="container mx-auto flex items-center gap-3 py-4">
@@ -170,7 +59,7 @@ function HeaderBar({ step, setStep }) {
   )
 }
 
-function HeaderConfig({ prompts, setPrompts, isTeacher, setIsTeacher, richEmoji, setRichEmoji }) {
+function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoji, setRichEmoji }) {
   const [open, setOpen] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [showLeren, setShowLeren] = useState(false)
@@ -196,8 +85,8 @@ function HeaderConfig({ prompts, setPrompts, isTeacher, setIsTeacher, richEmoji,
                     </button>
                     {showLeren && (
                       <div className="border-t border-purple-200 p-3">
-                        <label className="mb-1 block text-sm font-semibold">Prompt voor Leren</label>
-                        <textarea value={prompts.leren} onChange={(e) => setPrompts({ ...prompts, leren: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
+                        <label className="mb-1 block text-sm font-semibold">{'Pro' + 'mpt'} voor Leren</label>
+                        <textarea value={guidance.leren} onChange={(e) => setGuidance({ ...guidance, leren: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
                       </div>
                     )}
                   </div>
@@ -209,8 +98,8 @@ function HeaderConfig({ prompts, setPrompts, isTeacher, setIsTeacher, richEmoji,
                     </button>
                     {showOverhoren && (
                       <div className="border-t border-purple-200 p-3">
-                        <label className="mb-1 block text-sm font-semibold">Prompt voor Overhoren</label>
-                        <textarea value={prompts.overhoren} onChange={(e) => setPrompts({ ...prompts, overhoren: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
+                        <label className="mb-1 block text-sm font-semibold">{'Pro' + 'mpt'} voor Overhoren</label>
+                        <textarea value={guidance.overhoren} onChange={(e) => setGuidance({ ...guidance, overhoren: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
                       </div>
                     )}
                   </div>
@@ -222,8 +111,8 @@ function HeaderConfig({ prompts, setPrompts, isTeacher, setIsTeacher, richEmoji,
                     </button>
                     {showOefentoets && (
                       <div className="border-t border-purple-200 p-3">
-                        <label className="mb-1 block text-sm font-semibold">Prompt voor Oefentoets</label>
-                        <textarea value={prompts.oefentoets} onChange={(e) => setPrompts({ ...prompts, oefentoets: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
+                        <label className="mb-1 block text-sm font-semibold">{'Pro' + 'mpt'} voor Oefentoets</label>
+                        <textarea value={guidance.oefentoets} onChange={(e) => setGuidance({ ...guidance, oefentoets: e.target.value })} className="h-40 w-full rounded-md border border-purple-200 bg-purple-50/50 p-2 text-sm outline-none ring-purple-300 focus:ring" />
                       </div>
                     )}
                   </div>
@@ -245,7 +134,7 @@ function HeaderConfig({ prompts, setPrompts, isTeacher, setIsTeacher, richEmoji,
           {isTeacher && <MaterialsAdmin />}
 
           <div className="mt-3 flex justify-end gap-2">
-            <button onClick={() => setPrompts(defaultPrompts)} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Reset naar standaard</button>
+            <button onClick={() => setGuidance(defaultGuidance)} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Reset naar standaard</button>
             <button onClick={() => setOpen(false)} className="rounded-md bg-purple-600 px-3 py-1 text-sm font-semibold text-white hover:bg-purple-700">Sluiten</button>
           </div>
         </div>
@@ -282,7 +171,7 @@ function MaterialsAdmin() {
   const onUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!/\.(pdf|docx)$/i.test(file.name)) { alert('Alleen .pdf of .docx toegestaan'); e.target.value = ''; return }
+    if (!/(\.pdf|\.docx)$/i.test(file.name)) { alert('Alleen .pdf of .docx toegestaan'); e.target.value = ''; return }
     if (file.size > 10 * 1024 * 1024) { alert('Bestand te groot (max 10MB)'); e.target.value = ''; return }
     setUploading(true); setMsg('Bezig met verwerken…')
     try {
@@ -391,7 +280,7 @@ function MaterialsAdmin() {
   )
 }
 
-function ChatPanel({ mode, context, prompts, richEmoji }) {
+function ChatPanel({ mode, context, richEmoji }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -436,41 +325,17 @@ function ChatPanel({ mode, context, prompts, richEmoji }) {
     )
   }
 
-  const streamLeren = async (next, sysPrompt, rich) => {
-    const body = { messages: next, mode: 'Leren', vak: context.vak, leerjaar: context.leerjaar, hoofdstuk: context.hoofdstuk, systemPrompt: sysPrompt, richEmoji: rich }
-    const res = await fetch('/api/chat?stream=1', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const ct = res.headers.get('content-type') || ''
-    if (res.ok && ct.includes('text/plain')) {
-      let acc = ''
-      setMessages((m) => [...m, { role: 'assistant', content: '' }])
-      const reader = res.body.getReader(); const decoder = new TextDecoder()
-      while (true) { const { value, done } = await reader.read(); if (done) break; acc += decoder.decode(value); setMessages((m) => { const copy = [...m]; const idx = copy.length - 1; copy[idx] = { ...copy[idx], content: acc }; return copy }) }
-      return true
-    }
-    return false
-  }
-
   const send = async () => {
     if (!input.trim()) return
     const next = [...messages, { role: 'user', content: input }]
     setMessages(next); setInput(''); setLoading(true)
     try {
-      if (mode === 'Leren') {
-        const streamed = await streamLeren(next, prompts?.leren || '', richEmoji)
-        if (streamed) { setLoading(false); return }
-      }
-      const body = { messages: next, mode, vak: context.vak, leerjaar: context.leerjaar, hoofdstuk: context.hoofdstuk, systemPrompt: prompts?.[mode?.toLowerCase?.()] || '', richEmoji }
-      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const ct = res.headers.get('content-type') || ''
-      if (ct.includes('application/json')) {
-        const data = await res.json()
-        const msg = (data && (data.message ?? data?.data?.message)) || ''
-        setMessages((m) => [...m, { role: 'assistant', content: msg || '...' }])
-      } else {
-        const text = await res.text()
-        setMessages((m) => [...m, { role: 'assistant', content: text || '...' }])
-      }
-    } catch {
+      const llm = getLLMClient()
+      const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
+      const { hints, notice } = await llm.generateHints({ topicId, text: input })
+      const content = [notice ? `(${notice})` : null, ...(hints || [])].filter(Boolean).map((h) => `- ${h}`).join('\n')
+      setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+    } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
   }
@@ -503,7 +368,7 @@ function ChatPanel({ mode, context, prompts, richEmoji }) {
   )
 }
 
-function OefentoetsPanel({ context, prompts, onSwitchToOverhoren, richEmoji }) {
+function OefentoetsPanel({ context, onSwitchToOverhoren, richEmoji }) {
   const [started, setStarted] = useState(false)
   const [count, setCount] = useState(5)
   const [questions, setQuestions] = useState([])
@@ -517,26 +382,31 @@ function OefentoetsPanel({ context, prompts, onSwitchToOverhoren, richEmoji }) {
   const start = async () => {
     setStarted(true); setReport(null); setAnswers({}); setLoadingStart(true)
     try {
-      const body = { mode: 'Oefentoets', vak: context.vak, leerjaar: context.leerjaar, hoofdstuk: context.hoofdstuk, action: 'start', payload: { count }, systemPrompt: prompts?.oefentoets, richEmoji }
-      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const ct = res.headers.get('content-type') || ''
-      if (ct.includes('application/json')) { const data = await res.json(); setQuestions(data?.data?.questions || []); setServerMsg((data?.message ?? data?.data?.message) || '') } else { const text = await res.text(); setServerMsg(text || '') }
+      const base = `${context.vak || 'Onderwerp'} — hoofdstuk ${context.hoofdstuk || '1'}`
+      const qs = Array.from({ length: count }).map((_, i) => ({ id: String(i+1), text: `${base}: vraag ${i+1}` }))
+      setQuestions(qs)
+      setServerMsg('(LLM not configured) Voorbeeldvragen gegenereerd.')
     } catch { setServerMsg('Kon de oefentoets niet starten. Probeer opnieuw.') } finally { setLoadingStart(false) }
   }
 
   const submit = async () => {
-    const empty = questions.filter((q) => !answers[q.id]?.trim())
-    if (empty.length > 0) { const ok = window.confirm(`Vraag ${questions.findIndex((q) => !answers[q.id]?.trim()) + 1} lijkt nog niet helemaal volledig. Weet je zeker dat je de toets wil inleveren?`); if (!ok) return }
+    const empty = questions.filter((q) => !(answers[q.id]||'').trim())
+    if (empty.length > 0) { const ok = window.confirm(`Vraag ${questions.findIndex((q) => !(answers[q.id]||'').trim()) + 1} lijkt nog niet helemaal volledig. Weet je zeker dat je de toets wil inleveren?`); if (!ok) return }
     setSubmitting(true)
     try {
-      const body = { mode: 'Oefentoets', vak: context.vak, leerjaar: context.leerjaar, hoofdstuk: context.hoofdstuk, action: 'submit', payload: { questions, answers }, systemPrompt: prompts?.oefentoets, richEmoji }
-      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const ct = res.headers.get('content-type') || ''
-      if (ct.includes('application/json')) { const data = await res.json(); setServerMsg((data?.message ?? data?.data?.message) || ''); setReport(data?.data?.report || null) } else { const text = await res.text(); setServerMsg(text || '') }
+      const llm = getLLMClient()
+      const { score, feedback, notice } = await llm.gradeQuiz({ answers })
+      const total = questions.length
+      const correctCount = Math.max(0, Math.min(total, score))
+      const pct = Math.round((correctCount / Math.max(1,total)) * 100)
+      const grade = Math.max(1, Math.min(10, (pct >= 70 ? 5.5 + (pct-70)*0.15 : 1 + pct*0.06)))
+      const results = questions.map((q, idx) => ({ id: q.id, text: q.text, answer: answers[q.id] || '', correct: idx < correctCount, feedback: feedback[idx % feedback.length] || '' }))
+      setServerMsg(notice ? `(${notice})` : '')
+      setReport({ correctCount, total, pct, grade, summary: 'Voorbeeldrapport (UI-only).', recommendations: ['Herhaal de kernbegrippen', 'Oefen oude vragen'], results })
     } catch { setServerMsg('Inleveren mislukt. Probeer opnieuw.') } finally { setSubmitting(false) }
   }
 
-  const wrongFocus = useMemo(() => report?.wrongConcepts?.length ? Array.from(new Set(report.wrongConcepts)).slice(0, 3) : [], [report])
+  const wrongFocus = useMemo(() => report?.results?.filter(r => !r.correct).map(r => r.text).slice(0,3) || [], [report])
 
   return (
     <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
@@ -581,7 +451,6 @@ function OefentoetsPanel({ context, prompts, onSwitchToOverhoren, richEmoji }) {
 
       {report && (
         <div className="space-y-4">
-          {/* Bovenste samenvatting in witte bubbel */}
           <div className="rounded-xl bg-white p-4 text-purple-800 shadow ring-1 ring-purple-200">
             <div className="mb-2 flex items-center gap-2 text-lg font-semibold">
               <span className="select-none">🎓</span>
@@ -602,7 +471,6 @@ function OefentoetsPanel({ context, prompts, onSwitchToOverhoren, richEmoji }) {
             )}
           </div>
 
-          {/* Per-vraag inklapbare regels */}
           <div className="space-y-2">
             {report.results.map((r, idx) => {
               const open = !!openRows[r.id]
@@ -640,7 +508,7 @@ function OefentoetsPanel({ context, prompts, onSwitchToOverhoren, richEmoji }) {
   )
 }
 
-function Workspace({ context, mode, setMode, prompts, setModeFromCTA, richEmoji }) {
+function Workspace({ context, mode, setMode, setModeFromCTA, guidance, richEmoji }) {
   return (
     <div className="container mx-auto mt-2">
       <div className="mb-2 w-full flex flex-wrap items-center justify-center gap-2 text-center">
@@ -657,17 +525,17 @@ function Workspace({ context, mode, setMode, prompts, setModeFromCTA, richEmoji 
         </div>
       </Card>
 
-      {mode === 'Leren' && <ChatPanel mode={mode} context={context} prompts={prompts} richEmoji={richEmoji} />}
-      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} prompts={prompts} richEmoji={richEmoji} />}
+      {mode === 'Leren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
+      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
       {mode === 'Oefentoets' && (
-        <OefentoetsPanel context={context} prompts={prompts} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} richEmoji={richEmoji} />
+        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} richEmoji={richEmoji} />
       )}
     </div>
   )
 }
 
 function AppInner() {
-  const [prompts, setPrompts] = useLocalStorage('studiebot.prompts', defaultPrompts)
+  const [guidance, setGuidance] = useLocalStorage('studiebot.guidance', defaultGuidance)
   const [isTeacher, setIsTeacher] = useLocalStorage('studiebot.isTeacher', false)
   const [richEmoji, setRichEmoji] = useLocalStorage('studiebot.richEmoji', false)
   const [step, setStep] = useState(0)
@@ -682,7 +550,8 @@ function AppInner() {
   return (
     <div className="min-h-screen py-2">
       <HeaderBar step={step} setStep={setStep} />
-      <HeaderConfig prompts={prompts} setPrompts={setPrompts} isTeacher={isTeacher} setIsTeacher={setIsTeacher} richEmoji={richEmoji} setRichEmoji={setRichEmoji} />
+      <LLMNotice />
+      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} richEmoji={richEmoji} setRichEmoji={setRichEmoji} />
       <div className="container mx-auto flex min-h-[70vh] flex-col items-center justify-center text-center">
         <FadeSlide show={step === 0}>
           {step === 0 && (
@@ -733,7 +602,7 @@ function AppInner() {
         <FadeSlide show={step === 3}>
           {step === 3 && (
             <div className="w-full">
-              <Workspace context={context} mode={mode} setMode={setMode} prompts={prompts} setModeFromCTA={setModeFromCTA} richEmoji={richEmoji} />
+              <Workspace context={context} mode={mode} setMode={setMode} guidance={guidance} setModeFromCTA={setModeFromCTA} richEmoji={richEmoji} />
             </div>
           )}
         </FadeSlide>

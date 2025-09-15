@@ -4,7 +4,7 @@
   "extends": ["next/core-web-vitals"],
   "rules": {
     "no-restricted-imports": [
-      "error,",
+      "error",
       {
         "paths": [
           { "name": "openai", "message": "External LLM SDKs are forbidden." },
