@@ -1,0 +1,22 @@
+import nextPlugin from 'eslint-plugin-next'
+
+export default [
+  nextPlugin.configs["core-web-vitals"],
+  {
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'openai', message: 'External LLM SDKs are forbidden.' },
+            { name: '@ai-sdk/*', message: 'External LLM SDKs are forbidden.' },
+            { name: 'anthropic', message: 'External LLM SDKs are forbidden.' },
+            { name: 'groq-sdk', message: 'External LLM SDKs are forbidden.' },
+            { name: 'ollama', message: 'External LLM SDKs are forbidden.' },
+            { name: 'aws-sdk/bedrock', message: 'External LLM SDKs are forbidden.' }
+          ]
+        }
+      ]
+    }
+  }
+]
