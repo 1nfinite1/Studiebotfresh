@@ -10,8 +10,8 @@ function shouldScan(file) {
   if (!allowExt.has(ext)) return false
   const rel = file.replace(process.cwd()+path.sep,'')
   if (rel.startsWith('node_modules')) return false
-  if (rel.startsWith('scripts')) return false
-  if (rel === 'scripts/scan-llm.js') return false
+  if (rel.startsWith('scripts')) return false // skip scripts folder
+  if (rel === 'scripts/scan-llm.js') return false // skip the scanner itself
   return true
 }
 
