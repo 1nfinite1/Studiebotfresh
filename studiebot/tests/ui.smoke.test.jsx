@@ -38,7 +38,8 @@ describe('Studiebot UI (LLM disabled, DB disabled)', () => {
     fireEvent.click(screen.getByText('Sturen'))
 
     await waitFor(() => {
-      expect(screen.getByText(/LLM not configured/i)).toBeInTheDocument()
+      const matches = screen.queryAllByText(/LLM not configured/i)
+      expect(matches.length).toBeGreaterThan(0)
     })
   })
 
