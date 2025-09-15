@@ -12,6 +12,8 @@ function shouldScan(file) {
   if (rel.startsWith('node_modules')) return false
   if (rel.startsWith('scripts')) return false // skip scripts folder
   if (rel === 'scripts/scan-llm.js') return false // skip the scanner itself
+  if (rel === 'eslint.config.js') return false // allow eslint config to mention plugin names
+
   return true
 }
 
