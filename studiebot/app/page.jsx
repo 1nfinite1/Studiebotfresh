@@ -137,8 +137,8 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoj
           </div>
 
           <div className="mt-4 flex items-center justify-between rounded-md bg-purple-50 p-3">
-            <label className="text-sm font-semibold text-purple-700">Ik ben docent/beheerder</label>
-            <input type="checkbox" checked={isTeacher} onChange={(e) => setIsTeacher(e.target.checked)} />
+            <label htmlFor="is-teacher" className="text-sm font-semibold text-purple-700">Ik ben docent/beheerder</label>
+            <input id="is-teacher" type="checkbox" checked={isTeacher} onChange={(e) => setIsTeacher(e.target.checked)} />
           </div>
 
           <div className="mt-2 flex items-center justify-between rounded-md bg-purple-50 p-3">
