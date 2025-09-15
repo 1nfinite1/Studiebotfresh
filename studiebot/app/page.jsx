@@ -9,16 +9,9 @@ const YEARS = ['1', '2', '3', '4', '5', '6']
 const defaultGuidance = { leren: '', overhoren: '', oefentoets: '' }
 
 // Runtime backend URL helper
+import { getBackendUrl } from '../src/lib/backendUrl'
 async function apiFetch(path, options) {
-  if (!apiFetch.baseResolved) {
-    try {
-      const r = await fetch('/runtime-config')
-      if (r.ok) { const j = await r.json(); apiFetch.base = j?.backendUrl || '' }
-      else { apiFetch.base = process.env.NEXT_PUBLIC_BACKEND_URL || '' }
-    } catch { apiFetch.base = process.env.NEXT_PUBLIC_BACKEND_URL || '' }
-    apiFetch.baseResolved = true
-  }
-  const base = apiFetch.base || ''
+  const base = await getBackendUrl()
   const url = `${base}${path}`
   return fetch(url, options)
 }
