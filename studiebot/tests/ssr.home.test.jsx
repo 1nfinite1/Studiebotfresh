@@ -6,6 +6,7 @@ describe('SSR-safe smoke: home page', () => {
   it('renders without SSR-only crashes and shows the title', () => {
     // Rendering should not throw ReferenceError for window/document
     render(<App />)
-    expect(screen.getByText(/Studiebot/i)).toBeInTheDocument()
+    const all = screen.getAllByText(/Studiebot/i)
+    expect(all.length).toBeGreaterThan(0)
   })
 })
