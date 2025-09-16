@@ -1,14 +1,13 @@
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.responses import JSONResponse
 
 from app.routers.llm import router as llm_router
 from app.routers.glossary import router as glossary_router
+from app.limits import limiter
 
 
 def get_cors_origins():
@@ -19,8 +18,6 @@ def get_cors_origins():
 
 
 def create_app() -> FastAPI:
-    limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])  # 60 req/min per IP
-
     app = FastAPI(title="Studiebot Backend", version="1.0.0")
     app.state.limiter = limiter
 

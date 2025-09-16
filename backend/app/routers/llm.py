@@ -4,8 +4,7 @@ from typing import Dict, List
 
 import anyio
 import yaml
-from fastapi import APIRouter, Depends, Header, Request, Response
-from slowapi import Limiter
+from fastapi import APIRouter, Header, Request, Response
 
 from app.models.llm import (
     GenerateHintsIn,
@@ -13,6 +12,7 @@ from app.models.llm import (
     GradeQuizIn,
     GradeQuizOut,
 )
+from app.limits import limiter
 
 router = APIRouter()
 
@@ -154,25 +154,19 @@ async def _openai_grade_quiz(answers: List[str]) -> Dict:
             continue
 
 
-def get_limiter(request: Request) -> Limiter:
-    return request.app.state.limiter  # type: ignore
-
-
 def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
     if emoji_mode:
         resp.headers["X-Studiebot-Emoji-Mode"] = emoji_mode
 
 
 @router.post("/generate-hints", response_model=GenerateHintsOut)
+@limiter.limit("60/minute")
 async def generate_hints(
     payload: GenerateHintsIn,
     request: Request,
     response: Response,
-    limiter: Limiter = Depends(get_limiter),
     x_emoji_mode: str | None = Header(default=None, alias="X-Emoji-Mode"),
 ):
-    await limiter.hit(request, "60/minute")  # type: ignore
-
     if not _bool_env("LLM_ENABLED", False):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
@@ -210,22 +204,20 @@ async def generate_hints(
 
 
 @router.post("/grade-quiz", response_model=GradeQuizOut)
+@limiter.limit("60/minute")
 async def grade_quiz(
     payload: GradeQuizIn,
     request: Request,
     response: Response,
-    limiter: Limiter = Depends(get_limiter),
     x_emoji_mode: str | None = Header(default=None, alias="X-Emoji-Mode"),
 ):
-    await limiter.hit(request, "60/minute")  # type: ignore
-
     if not _bool_env("LLM_ENABLED", False):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return GradeQuizOut(score=0, feedback=["LLM not configured"], notice="LLM not configured")
 
     provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
-    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
+    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"]):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return GradeQuizOut(score=0, feedback=["LLM not configured"], notice="not_configured")
