@@ -217,7 +217,7 @@ async def grade_quiz(
         return GradeQuizOut(score=0, feedback=["LLM not configured"], notice="LLM not configured")
 
     provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
-    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"]):
+    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return GradeQuizOut(score=0, feedback=["LLM not configured"], notice="not_configured")
