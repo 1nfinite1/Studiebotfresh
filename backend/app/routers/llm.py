@@ -154,6 +154,10 @@ async def _openai_grade_quiz(answers: List[str]) -> Dict:
             continue
 
 
+def get_limiter(request: Request) -> Limiter:
+    return request.app.state.limiter  # type: ignore
+
+
 def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
     if emoji_mode:
         resp.headers["X-Studiebot-Emoji-Mode"] = emoji_mode
@@ -164,7 +168,7 @@ async def generate_hints(
     payload: GenerateHintsIn,
     request: Request,
     response: Response,
-    limiter: Limiter = Depends(lambda req=request: req.app.state.limiter),
+    limiter: Limiter = Depends(get_limiter),
     x_emoji_mode: str | None = Header(default=None, alias="X-Emoji-Mode"),
 ):
     await limiter.hit(request, "60/minute")  # type: ignore
@@ -172,18 +176,18 @@ async def generate_hints(
     if not _bool_env("LLM_ENABLED", False):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="LLM not configured")
+        return GenerateHintsOut(hints=[], notice="LLM not configured", hint=None)
 
     provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
     if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="not_configured")
+        return GenerateHintsOut(hints=[], notice="not_configured", hint=None)
 
     if await _moderation_flagged(f"{payload.topicId}\n\n{payload.text}"):
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="moderation_blocked")
+        return GenerateHintsOut(hints=[], notice="moderation_blocked", hint=None)
 
     try:
         if provider == "openai":
@@ -194,14 +198,15 @@ async def generate_hints(
         if not isinstance(hints_raw, list):
             hints_raw = []
         hints = [str(x) for x in hints_raw][:5]
-        out = GenerateHintsOut(hints=hints)
+        single_hint = hints[0] if hints else None
+        out = GenerateHintsOut(hints=hints, hint=single_hint)
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return out
     except Exception:
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="provider_error")
+        return GenerateHintsOut(hints=[], notice="provider_error", hint=None)
 
 
 @router.post("/grade-quiz", response_model=GradeQuizOut)
@@ -209,7 +214,7 @@ async def grade_quiz(
     payload: GradeQuizIn,
     request: Request,
     response: Response,
-    limiter: Limiter = Depends(lambda req=request: req.app.state.limiter),
+    limiter: Limiter = Depends(get_limiter),
     x_emoji_mode: str | None = Header(default=None, alias="X-Emoji-Mode"),
 ):
     await limiter.hit(request, "60/minute")  # type: ignore

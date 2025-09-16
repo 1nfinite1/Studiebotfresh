@@ -10,6 +10,8 @@ class GenerateHintsIn(BaseModel):
 class GenerateHintsOut(BaseModel):
     hints: List[str]
     notice: Optional[str] = None
+    # Extended to optionally carry a single hint for quiz generation flows
+    hint: Optional[str] = None
 
 
 class GradeQuizIn(BaseModel):
