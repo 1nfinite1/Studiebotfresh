@@ -73,7 +73,7 @@ function HeaderBar({ step, setStep }) {
   )
 }
 
-function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoji, setRichEmoji }) {
+function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
   const [open, setOpen] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [showLeren, setShowLeren] = useState(false)
