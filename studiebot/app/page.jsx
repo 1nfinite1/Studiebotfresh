@@ -299,6 +299,7 @@ function ChatPanel({ mode, context }) {
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
   const listRef = useRef(null)
+  const { fetchGlossary } = useGlossary()
   
   useEffect(() => {
     const el = listRef.current
@@ -306,6 +307,13 @@ function ChatPanel({ mode, context }) {
     if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
     else el.scrollTop = el.scrollHeight
   }, [messages])
+
+  // Fetch glossary when context changes
+  useEffect(() => {
+    if (context.vak && context.leerjaar && context.hoofdstuk) {
+      fetchGlossary(context.vak, context.leerjaar, context.hoofdstuk)
+    }
+  }, [context.vak, context.leerjaar, context.hoofdstuk, fetchGlossary])
 
   useEffect(() => {
     setMessages([])
