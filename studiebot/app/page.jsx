@@ -506,7 +506,7 @@ function AppInner() {
         <FadeSlide show={step === 3}>
           {step === 3 && (
             <div className="w-full">
-              <Workspace context={context} mode={mode} setMode={setMode} guidance={guidance} setModeFromCTA={setModeFromCTA} richEmoji={richEmoji} />
+              <Workspace context={context} mode={mode} setMode={setMode} guidance={guidance} setModeFromCTA={setModeFromCTA} />
             </div>
           )}
         </FadeSlide>
