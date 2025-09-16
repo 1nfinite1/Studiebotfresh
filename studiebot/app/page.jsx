@@ -442,7 +442,6 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
 function AppInner() {
   const [guidance, setGuidance] = useLocalStorage('studiebot.guidance', defaultGuidance)
   const [isTeacher, setIsTeacher] = useLocalStorage('studiebot.isTeacher', false)
-  const [richEmoji, setRichEmoji] = useLocalStorage('studiebot.richEmoji', false)
   const [step, setStep] = useState(0)
   const [vak, setVak] = useState('')
   const [leerjaar, setLeerjaar] = useState('')
