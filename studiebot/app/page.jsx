@@ -322,7 +322,7 @@ function ChatPanel({ mode, context }) {
     return () => { if (t) clearTimeout(t) }
   }, [loading])
 
-  const renderMessage = (text) => {
+  const renderMessage = (text, hint = null) => {
     const lines = String(text || '').split(/\n\n+/)
     return (
       <div className="space-y-2">
@@ -332,13 +332,25 @@ function ChatPanel({ mode, context }) {
           if (isList) {
             return (
               <ul key={i} className="list-disc pl-6 space-y-1">
-                {bulletLines.map((l, j) => <li key={j}>{l.replace(/^\s*-\s*/, '')}</li>)}
+                {bulletLines.map((l, j) => {
+                  const itemText = l.replace(/^\s*-\s*/, '')
+                  return (
+                    <li key={j}>
+                      <ProcessedText>{itemText}</ProcessedText>
+                    </li>
+                  )
+                })}
               </ul>
             )
           }
           const withBold = block.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/_(.*?)_/g, '<em>$1</em>')
-          return <p key={i} dangerouslySetInnerHTML={{ __html: withBold }} />
+          return (
+            <p key={i}>
+              <ProcessedText>{withBold.replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<em>/g, '_').replace(/<\/em>/g, '_')}</ProcessedText>
+            </p>
+          )
         })}
+        {shouldShowHint(text, hint) && <HintBubble hint={hint} />}
       </div>
     )
   }
