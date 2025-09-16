@@ -430,10 +430,10 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
         </div>
       </Card>
 
-      {mode === 'Leren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
-      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
+      {mode === 'Leren' && <ChatPanel mode={mode} context={context} />}
+      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} />}
       {mode === 'Oefentoets' && (
-        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} richEmoji={richEmoji} />
+        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} />
       )}
     </div>
   )
