@@ -350,9 +350,9 @@ function ChatPanel({ mode, context }) {
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      const { hints, notice } = await llm.generateHints({ topicId, text: input })
+      const { hints, notice, hint } = await llm.generateHints({ topicId, text: input })
       const content = [notice ? `(${notice})` : null, ...(hints || [])].filter(Boolean).map((h) => `- ${h}`).join('\n')
-      setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: hint || null }])
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
