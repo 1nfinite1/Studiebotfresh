@@ -6,6 +6,11 @@ client = TestClient(app)
 
 
 def test_rate_limit_exceeded(monkeypatch):
+    # Enable LLM so the request doesn't return early
+    monkeypatch.setenv("LLM_ENABLED", "true")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    # Don't set OPENAI_API_KEY so it will return "not configured" but still hit the rate limiter
+    
     # reduce limit for test speed by monkeypatching default limiter
     app.state.limiter._default_limits = ["5/minute"]
     hits = 0
