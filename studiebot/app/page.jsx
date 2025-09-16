@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLLMClient } from '../infra/llm/index'
-import { GlossaryProvider } from '../src/glossary/GlossaryProvider'
+import { GlossaryProvider, useGlossary } from '../src/glossary/GlossaryProvider'
 import { EmojiModeProvider } from '../src/emoji/EmojiModeContext'
 import { EmojiModeToggle } from '../components/EmojiModeToggle'
 import { ProcessedText } from '../src/lib/textProcessor'
