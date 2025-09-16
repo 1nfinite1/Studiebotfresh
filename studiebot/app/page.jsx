@@ -439,6 +439,159 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
   )
 }
 
+function OefentoetsPanel({ context, onSwitchToOverhoren }) {
+  const [questions, setQuestions] = useState([])
+  const [currentQ, setCurrentQ] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [submitted, setSubmitted] = useState(false)
+  const [score, setScore] = useState(null)
+  const [feedback, setFeedback] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Generate mock questions for the test
+    const mockQuestions = [
+      { id: 1, question: "Wat is de hoofdstad van Nederland?", type: "open" },
+      { id: 2, question: "In welk jaar begon de Tweede Wereldoorlog?", type: "open" },
+      { id: 3, question: "Wat is 2 + 2?", type: "open" }
+    ]
+    setQuestions(mockQuestions)
+    setCurrentQ(0)
+    setAnswers({})
+    setSubmitted(false)
+    setScore(null)
+    setFeedback([])
+  }, [context])
+
+  const handleAnswer = (value) => {
+    setAnswers(prev => ({ ...prev, [questions[currentQ]?.id]: value }))
+  }
+
+  const nextQuestion = () => {
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(currentQ + 1)
+    }
+  }
+
+  const prevQuestion = () => {
+    if (currentQ > 0) {
+      setCurrentQ(currentQ - 1)
+    }
+  }
+
+  const submitTest = async () => {
+    setLoading(true)
+    try {
+      const llm = getLLMClient()
+      const answerArray = questions.map(q => answers[q.id] || '')
+      const result = await llm.gradeQuiz({ answers: answerArray })
+      setScore(result.score || 0)
+      setFeedback(result.feedback || [])
+      setSubmitted(true)
+    } catch (e) {
+      console.error('Failed to grade quiz:', e)
+      setScore(0)
+      setFeedback(['Er ging iets mis bij het nakijken.'])
+      setSubmitted(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const currentQuestion = questions[currentQ]
+
+  if (submitted) {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold text-white mb-4">Resultaat</h3>
+          <div className="text-4xl font-bold text-white mb-2">{score}%</div>
+          <div className="space-y-2 mb-6">
+            {feedback.map((item, i) => (
+              <p key={i} className="text-white/90">
+                <ProcessedText>{item}</ProcessedText>
+              </p>
+            ))}
+          </div>
+          <div className="flex gap-3 justify-center">
+            <FullButton onClick={() => window.location.reload()}>Opnieuw</FullButton>
+            <FullButton variant="secondary" onClick={() => onSwitchToOverhoren()}>
+              Verder oefenen
+            </FullButton>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <p className="text-white text-center">Oefentoets wordt voorbereid...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xl font-bold text-white">
+          Oefentoets - Vraag {currentQ + 1} van {questions.length}
+        </h3>
+        <div className="text-sm text-white/70">
+          {Object.keys(answers).length}/{questions.length} beantwoord
+        </div>
+      </div>
+      
+      {currentQuestion && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-white/15 p-4">
+            <p className="text-white font-medium">
+              <ProcessedText>{currentQuestion.question}</ProcessedText>
+            </p>
+          </div>
+          
+          <textarea
+            value={answers[currentQuestion.id] || ''}
+            onChange={(e) => handleAnswer(e.target.value)}
+            placeholder="Typ je antwoord hier..."
+            className="w-full h-32 rounded-xl border border-white/20 bg-white/90 p-3 text-purple-800 outline-none placeholder:text-purple-300 focus:ring-2 focus:ring-purple-300 resize-none"
+          />
+          
+          <div className="flex items-center justify-between">
+            <button
+              onClick={prevQuestion}
+              disabled={currentQ === 0}
+              className="rounded-xl bg-white/20 px-4 py-2 text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Vorige
+            </button>
+            
+            <div className="flex gap-2">
+              {currentQ < questions.length - 1 ? (
+                <button
+                  onClick={nextQuestion}
+                  className="rounded-xl bg-white px-4 py-2 font-semibold text-purple-700 hover:bg-purple-100"
+                >
+                  Volgende
+                </button>
+              ) : (
+                <button
+                  onClick={submitTest}
+                  disabled={loading || Object.keys(answers).length === 0}
+                  className="rounded-xl bg-green-600 px-6 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Nakijken...' : 'Inleveren'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AppInner() {
   const [guidance, setGuidance] = useLocalStorage('studiebot.guidance', defaultGuidance)
   const [isTeacher, setIsTeacher] = useLocalStorage('studiebot.isTeacher', false)
