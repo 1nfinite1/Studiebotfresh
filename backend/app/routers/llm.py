@@ -121,31 +121,15 @@ async def _openai_grade_quiz(answers: List[str]) -> Dict:
             if delay:
                 await _sleep_backoff(delay)
             with anyio.fail_after(10):
-                try:
-                    resp = client.responses.create(
-                        model=model,
-                        input=[
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": user},
-                        ],
-                        response_format={"type": "json_object"},
-                    )
-                    content = getattr(resp, "output", None) or getattr(resp, "content", None)
-                    text_out = None
-                    if isinstance(content, list) and content:
-                        text_out = getattr(content[0], "text", None)
-                    if not text_out:
-                        text_out = getattr(resp, "text", None)
-                except Exception:
-                    comp = client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": user},
-                        ],
-                        response_format={"type": "json_object"},
-                    )
-                    text_out = comp.choices[0].message.content
+                comp = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    response_format={"type": "json_object"},
+                )
+                text_out = comp.choices[0].message.content
             data = json.loads(text_out or "{}")
             return data
         except Exception:
