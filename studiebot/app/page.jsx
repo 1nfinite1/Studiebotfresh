@@ -141,8 +141,7 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoj
           </div>
 
           <div className="mt-2 flex items-center justify-between rounded-md bg-purple-50 p-3">
-            <label htmlFor="rich-emoji" className="text-sm font-semibold text-purple-700">Rijke emoji-modus</label>
-            <input id="rich-emoji" type="checkbox" checked={richEmoji} onChange={(e) => setRichEmoji(e.target.checked)} />
+            <EmojiModeToggle />
           </div>
 
           {isTeacher && <MaterialsAdmin />}
