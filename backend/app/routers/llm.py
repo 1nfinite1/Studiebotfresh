@@ -12,7 +12,7 @@ from app.models.llm import (
     GradeQuizIn,
     GradeQuizOut,
 )
-from app.limits import limiter
+from app.rate_limiter import limiter
 
 router = APIRouter()
 
