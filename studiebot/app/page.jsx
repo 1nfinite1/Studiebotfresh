@@ -668,5 +668,13 @@ function AppInner() {
   )
 }
 
-function App() { return <AppInner /> }
+function App() { 
+  return (
+    <EmojiModeProvider>
+      <GlossaryProvider>
+        <AppInner />
+      </GlossaryProvider>
+    </EmojiModeProvider>
+  )
+}
 export default App
