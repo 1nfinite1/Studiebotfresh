@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 
 from app.routers.llm import router as llm_router
 from app.routers.glossary import router as glossary_router
-from app.limits import limiter
+from app.rate_limiter import limiter
 
 
 def get_cors_origins():
