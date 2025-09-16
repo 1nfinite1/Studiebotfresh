@@ -299,6 +299,7 @@ function ChatPanel({ mode, context }) {
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
   const listRef = useRef(null)
+  
   useEffect(() => {
     const el = listRef.current
     if (!el) return
