@@ -455,7 +455,7 @@ function AppInner() {
     <div className="min-h-screen py-2">
       <HeaderBar step={step} setStep={setStep} />
       <LLMNotice />
-      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} richEmoji={richEmoji} setRichEmoji={setRichEmoji} />
+      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} />
       <div className="container mx-auto flex min-h-[70vh] flex-col items-center justify-center text-center">
         <FadeSlide show={step === 0}>
           {step === 0 && (
