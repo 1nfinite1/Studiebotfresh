@@ -77,7 +77,7 @@ def _dedupe_terms(items: List[Dict[str, str]]) -> List[Dict[str, str]]:
 
 
 @router.get("/glossary")
-async def get_glossary(vak: str, leerjaar: str, hoofdstuk: str, response: Response):
+async def get_glossary(vak: str = "", leerjaar: str = "", hoofdstuk: str = "", response: Response = None):
     # DB disabled by default: serve in-memory if present, else empty
     key = (vak or "", leerjaar or "", hoofdstuk or "")
     terms = _STORE.get(key, [])
