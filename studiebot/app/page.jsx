@@ -413,7 +413,7 @@ function ChatPanel({ mode, context }) {
   )
 }
 
-function Workspace({ context, mode, setMode, setModeFromCTA, guidance, richEmoji }) {
+function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
   return (
     <div className="container mx-auto mt-2">
       <div className="mb-2 w-full flex flex-wrap items-center justify-center gap-2 text-center">
