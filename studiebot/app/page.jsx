@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLLMClient } from '../infra/llm/index'
+import { GlossaryProvider } from '../src/glossary/GlossaryProvider'
+import { EmojiModeProvider } from '../src/emoji/EmojiModeContext'
+import { EmojiModeToggle } from '../components/EmojiModeToggle'
+import { ProcessedText } from '../src/lib/textProcessor'
+import { HintBubble } from '../src/hints/HintBubble'
+import { shouldShowHint } from '../src/lib/messageUtils'
 
 const SUBJECTS = [ 'Nederlands', 'Engels', 'Geschiedenis', 'Aardrijkskunde', 'Wiskunde', 'Natuurkunde', 'Scheikunde', 'Biologie', 'Economie', 'Maatschappijleer' ]
 const YEARS = ['1', '2', '3', '4', '5', '6']
