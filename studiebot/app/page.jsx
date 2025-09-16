@@ -293,7 +293,7 @@ function MaterialsAdmin() {
   )
 }
 
-function ChatPanel({ mode, context, richEmoji }) {
+function ChatPanel({ mode, context }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
