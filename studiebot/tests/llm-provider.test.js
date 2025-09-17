@@ -56,9 +56,8 @@ describe('LLM Provider Factory', () => {
   it('web client handles gradeQuiz correctly', async () => {
     process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
     
-    fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ score: 85, feedback: ['Good work'], notice: 'enabled' })
-    })
+    // Mock the web client function
+    webGradeQuiz.mockResolvedValueOnce({ score: 85, feedback: ['Good work'], notice: 'enabled' })
     
     const client = getLLMClient()
     const result = await client.gradeQuiz({ answers: ['answer1', 'answer2'] })
