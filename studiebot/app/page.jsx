@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLLMClient } from '../infra/llm/index'
+import { GlossaryProvider, useGlossary } from '../src/glossary/GlossaryProvider'
+import { EmojiModeProvider } from '../src/emoji/EmojiModeContext'
+import { EmojiModeToggle } from '../components/EmojiModeToggle'
+import { ProcessedText } from '../src/lib/textProcessor'
+import { HintBubble } from '../src/hints/HintBubble'
+import { shouldShowHint } from '../src/lib/messageUtils'
 
 const SUBJECTS = [ 'Nederlands', 'Engels', 'Geschiedenis', 'Aardrijkskunde', 'Wiskunde', 'Natuurkunde', 'Scheikunde', 'Biologie', 'Economie', 'Maatschappijleer' ]
 const YEARS = ['1', '2', '3', '4', '5', '6']
@@ -67,7 +73,7 @@ function HeaderBar({ step, setStep }) {
   )
 }
 
-function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoji, setRichEmoji }) {
+function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
   const [open, setOpen] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [showLeren, setShowLeren] = useState(false)
@@ -135,8 +141,7 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher, richEmoj
           </div>
 
           <div className="mt-2 flex items-center justify-between rounded-md bg-purple-50 p-3">
-            <label htmlFor="rich-emoji" className="text-sm font-semibold text-purple-700">Rijke emoji-modus</label>
-            <input id="rich-emoji" type="checkbox" checked={richEmoji} onChange={(e) => setRichEmoji(e.target.checked)} />
+            <EmojiModeToggle />
           </div>
 
           {isTeacher && <MaterialsAdmin />}
@@ -288,18 +293,27 @@ function MaterialsAdmin() {
   )
 }
 
-function ChatPanel({ mode, context, richEmoji }) {
+function ChatPanel({ mode, context }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
   const listRef = useRef(null)
+  const { fetchGlossary } = useGlossary()
+  
   useEffect(() => {
     const el = listRef.current
     if (!el) return
     if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
     else el.scrollTop = el.scrollHeight
   }, [messages])
+
+  // Fetch glossary when context changes
+  useEffect(() => {
+    if (context.vak && context.leerjaar && context.hoofdstuk) {
+      fetchGlossary(context.vak, context.leerjaar, context.hoofdstuk)
+    }
+  }, [context.vak, context.leerjaar, context.hoofdstuk, fetchGlossary])
 
   useEffect(() => {
     setMessages([])
@@ -317,7 +331,7 @@ function ChatPanel({ mode, context, richEmoji }) {
     return () => { if (t) clearTimeout(t) }
   }, [loading])
 
-  const renderMessage = (text) => {
+  const renderMessage = (text, hint = null) => {
     const lines = String(text || '').split(/\n\n+/)
     return (
       <div className="space-y-2">
@@ -327,13 +341,25 @@ function ChatPanel({ mode, context, richEmoji }) {
           if (isList) {
             return (
               <ul key={i} className="list-disc pl-6 space-y-1">
-                {bulletLines.map((l, j) => <li key={j}>{l.replace(/^\s*-\s*/, '')}</li>)}
+                {bulletLines.map((l, j) => {
+                  const itemText = l.replace(/^\s*-\s*/, '')
+                  return (
+                    <li key={j}>
+                      <ProcessedText>{itemText}</ProcessedText>
+                    </li>
+                  )
+                })}
               </ul>
             )
           }
           const withBold = block.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/_(.*?)_/g, '<em>$1</em>')
-          return <p key={i} dangerouslySetInnerHTML={{ __html: withBold }} />
+          return (
+            <p key={i}>
+              <ProcessedText>{withBold.replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<em>/g, '_').replace(/<\/em>/g, '_')}</ProcessedText>
+            </p>
+          )
         })}
+        {shouldShowHint(text, hint) && <HintBubble hint={hint} />}
       </div>
     )
   }
@@ -345,9 +371,9 @@ function ChatPanel({ mode, context, richEmoji }) {
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      const { hints, notice } = await llm.generateHints({ topicId, text: input })
+      const { hints, notice, hint } = await llm.generateHints({ topicId, text: input })
       const content = [notice ? `(${notice})` : null, ...(hints || [])].filter(Boolean).map((h) => `- ${h}`).join('\n')
-      setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: hint || null }])
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
@@ -360,7 +386,13 @@ function ChatPanel({ mode, context, richEmoji }) {
       <div ref={listRef} className="max-h-[50vh] space-y-4 overflow-auto p-2">
         {messages.map((m, idx) => (
           <div key={idx} className={`max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
-            <div className="max-w-[70ch] whitespace-pre-wrap">{m.role === 'assistant' ? renderMessage(m.content) : m.content}</div>
+            <div className="max-w-[70ch] whitespace-pre-wrap">
+              {m.role === 'assistant' ? (
+                renderMessage(m.content, m.hint)
+              ) : (
+                <ProcessedText>{m.content}</ProcessedText>
+              )}
+            </div>
           </div>
         ))}
         {showTyping && (
@@ -381,7 +413,7 @@ function ChatPanel({ mode, context, richEmoji }) {
   )
 }
 
-function Workspace({ context, mode, setMode, setModeFromCTA, guidance, richEmoji }) {
+function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
   return (
     <div className="container mx-auto mt-2">
       <div className="mb-2 w-full flex flex-wrap items-center justify-center gap-2 text-center">
@@ -398,10 +430,163 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance, richEmoji
         </div>
       </Card>
 
-      {mode === 'Leren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
-      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} richEmoji={richEmoji} />}
+      {mode === 'Leren' && <ChatPanel mode={mode} context={context} />}
+      {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} />}
       {mode === 'Oefentoets' && (
-        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} richEmoji={richEmoji} />
+        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} />
+      )}
+    </div>
+  )
+}
+
+function OefentoetsPanel({ context, onSwitchToOverhoren }) {
+  const [questions, setQuestions] = useState([])
+  const [currentQ, setCurrentQ] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [submitted, setSubmitted] = useState(false)
+  const [score, setScore] = useState(null)
+  const [feedback, setFeedback] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Generate mock questions for the test
+    const mockQuestions = [
+      { id: 1, question: "Wat is de hoofdstad van Nederland?", type: "open" },
+      { id: 2, question: "In welk jaar begon de Tweede Wereldoorlog?", type: "open" },
+      { id: 3, question: "Wat is 2 + 2?", type: "open" }
+    ]
+    setQuestions(mockQuestions)
+    setCurrentQ(0)
+    setAnswers({})
+    setSubmitted(false)
+    setScore(null)
+    setFeedback([])
+  }, [context])
+
+  const handleAnswer = (value) => {
+    setAnswers(prev => ({ ...prev, [questions[currentQ]?.id]: value }))
+  }
+
+  const nextQuestion = () => {
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(currentQ + 1)
+    }
+  }
+
+  const prevQuestion = () => {
+    if (currentQ > 0) {
+      setCurrentQ(currentQ - 1)
+    }
+  }
+
+  const submitTest = async () => {
+    setLoading(true)
+    try {
+      const llm = getLLMClient()
+      const answerArray = questions.map(q => answers[q.id] || '')
+      const result = await llm.gradeQuiz({ answers: answerArray })
+      setScore(result.score || 0)
+      setFeedback(result.feedback || [])
+      setSubmitted(true)
+    } catch (e) {
+      console.error('Failed to grade quiz:', e)
+      setScore(0)
+      setFeedback(['Er ging iets mis bij het nakijken.'])
+      setSubmitted(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const currentQuestion = questions[currentQ]
+
+  if (submitted) {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold text-white mb-4">Resultaat</h3>
+          <div className="text-4xl font-bold text-white mb-2">{score}%</div>
+          <div className="space-y-2 mb-6">
+            {feedback.map((item, i) => (
+              <p key={i} className="text-white/90">
+                <ProcessedText>{item}</ProcessedText>
+              </p>
+            ))}
+          </div>
+          <div className="flex gap-3 justify-center">
+            <FullButton onClick={() => window.location.reload()}>Opnieuw</FullButton>
+            <FullButton variant="secondary" onClick={() => onSwitchToOverhoren()}>
+              Verder oefenen
+            </FullButton>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <p className="text-white text-center">Oefentoets wordt voorbereid...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xl font-bold text-white">
+          Oefentoets - Vraag {currentQ + 1} van {questions.length}
+        </h3>
+        <div className="text-sm text-white/70">
+          {Object.keys(answers).length}/{questions.length} beantwoord
+        </div>
+      </div>
+      
+      {currentQuestion && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-white/15 p-4">
+            <p className="text-white font-medium">
+              <ProcessedText>{currentQuestion.question}</ProcessedText>
+            </p>
+          </div>
+          
+          <textarea
+            value={answers[currentQuestion.id] || ''}
+            onChange={(e) => handleAnswer(e.target.value)}
+            placeholder="Typ je antwoord hier..."
+            className="w-full h-32 rounded-xl border border-white/20 bg-white/90 p-3 text-purple-800 outline-none placeholder:text-purple-300 focus:ring-2 focus:ring-purple-300 resize-none"
+          />
+          
+          <div className="flex items-center justify-between">
+            <button
+              onClick={prevQuestion}
+              disabled={currentQ === 0}
+              className="rounded-xl bg-white/20 px-4 py-2 text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Vorige
+            </button>
+            
+            <div className="flex gap-2">
+              {currentQ < questions.length - 1 ? (
+                <button
+                  onClick={nextQuestion}
+                  className="rounded-xl bg-white px-4 py-2 font-semibold text-purple-700 hover:bg-purple-100"
+                >
+                  Volgende
+                </button>
+              ) : (
+                <button
+                  onClick={submitTest}
+                  disabled={loading || Object.keys(answers).length === 0}
+                  className="rounded-xl bg-green-600 px-6 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Nakijken...' : 'Inleveren'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -410,7 +595,6 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance, richEmoji
 function AppInner() {
   const [guidance, setGuidance] = useLocalStorage('studiebot.guidance', defaultGuidance)
   const [isTeacher, setIsTeacher] = useLocalStorage('studiebot.isTeacher', false)
-  const [richEmoji, setRichEmoji] = useLocalStorage('studiebot.richEmoji', false)
   const [step, setStep] = useState(0)
   const [vak, setVak] = useState('')
   const [leerjaar, setLeerjaar] = useState('')
@@ -424,7 +608,7 @@ function AppInner() {
     <div className="min-h-screen py-2">
       <HeaderBar step={step} setStep={setStep} />
       <LLMNotice />
-      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} richEmoji={richEmoji} setRichEmoji={setRichEmoji} />
+      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} />
       <div className="container mx-auto flex min-h-[70vh] flex-col items-center justify-center text-center">
         <FadeSlide show={step === 0}>
           {step === 0 && (
@@ -475,7 +659,7 @@ function AppInner() {
         <FadeSlide show={step === 3}>
           {step === 3 && (
             <div className="w-full">
-              <Workspace context={context} mode={mode} setMode={setMode} guidance={guidance} setModeFromCTA={setModeFromCTA} richEmoji={richEmoji} />
+              <Workspace context={context} mode={mode} setMode={setMode} guidance={guidance} setModeFromCTA={setModeFromCTA} />
             </div>
           )}
         </FadeSlide>
@@ -484,5 +668,13 @@ function AppInner() {
   )
 }
 
-function App() { return <AppInner /> }
+function App() { 
+  return (
+    <EmojiModeProvider>
+      <GlossaryProvider>
+        <AppInner />
+      </GlossaryProvider>
+    </EmojiModeProvider>
+  )
+}
 export default App
