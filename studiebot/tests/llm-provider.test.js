@@ -39,10 +39,8 @@ describe('LLM Provider Factory', () => {
   it('returns web-backed client when NEXT_PUBLIC_LLM_ENABLED is true', async () => {
     process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
     
-    // Mock fetch responses
-    fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ hints: ['test hint'], notice: 'enabled' })
-    })
+    // Mock the web client function
+    webGenerateHints.mockResolvedValueOnce({ hints: ['test hint'], notice: 'enabled' })
     
     const client = getLLMClient()
     
