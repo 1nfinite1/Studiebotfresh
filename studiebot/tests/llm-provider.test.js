@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getLLMClient } from '../infra/llm/index'
+import { webGenerateHints, webGradeQuiz } from '../infra/llm/webClient'
 
 // Mock the web client
 vi.mock('../infra/llm/webClient', () => ({
