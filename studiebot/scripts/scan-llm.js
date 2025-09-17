@@ -27,6 +27,11 @@ function shouldScan(file) {
   return true
 }
 
+function isAllowedLLMPath(file) {
+  const rel = path.relative(process.cwd(), file).replace(/\\/g, '/')
+  return rel.startsWith('app/api/llm/') || rel.startsWith('infra/llm/server/')
+}
+
 function walk(dir) {
   let files = []
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
