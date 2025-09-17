@@ -1,5 +1,5 @@
 import { webGenerateHints, webGradeQuiz } from './webClient';
-import { noopLLM } from './noopClient';
+import noopLLM from './noopClient';
 
 /**
  * Factory function to get appropriate LLM client
