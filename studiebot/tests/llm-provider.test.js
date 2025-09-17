@@ -70,9 +70,8 @@ describe('LLM Provider Factory', () => {
   it('web client handles malformed responses gracefully', async () => {
     process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
     
-    fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ invalid: 'response' })
-    })
+    // Mock the web client function with invalid response
+    webGenerateHints.mockResolvedValueOnce({ invalid: 'response' })
     
     const client = getLLMClient()
     const result = await client.generateHints({ topicId: 'test', text: 'test' })
