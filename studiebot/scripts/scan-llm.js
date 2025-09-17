@@ -69,10 +69,10 @@ for (const f of files) {
   const noBlockComments = text.replace(/\/\*[\s\S]*?\*\//g, '')
   const lines = noBlockComments.split(/\n/)
 
-  // 1) restricted imports
-  if (restrictedImport.test(noBlockComments)) {
+  // 1) restricted imports (except in allowed paths)
+  if (restrictedImport.test(noBlockComments) && !isAllowedLLMPath(f)) {
     const idx = lines.findIndex((l) => restrictedImport.test(l))
-    fail(f, idx + 1, lines[idx], 'Restricted LLM import')
+    fail(f, idx + 1, lines[idx], 'Restricted LLM import (only allowed in app/api/llm/ and infra/llm/server/)')
   }
 
   // 2) known LLM hooks/APIs
