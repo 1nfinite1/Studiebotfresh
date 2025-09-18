@@ -15,13 +15,19 @@ export async function getMongoClient() {
       throw new Error('MONGODB_URI environment variable is not set');
     }
     
-    client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
+    try {
+      client = new MongoClient(uri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      
+      await client.connect();
+    } catch (error) {
+      console.error('MongoDB connection failed:', error.message);
+      client = null; // Reset client so it can be retried
+      throw error;
+    }
   }
   
   return client;
