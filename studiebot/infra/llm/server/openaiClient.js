@@ -363,43 +363,125 @@ Maak een vraag die past bij dit niveau en onderwerp.`;
 }
 
 /**
- * Grade quiz answers
+ * Grade quiz answers with detailed feedback and weak area analysis
  * @param {Object} params - Parameters
  * @param {string[]} params.answers - Array of student answers
- * @returns {Promise<Object>} Response with score, feedback, notice, header, and policy
+ * @param {string[]} params.questions - Array of question texts
+ * @param {string[]} params.objectives - Array of learning objectives
+ * @param {boolean} params.isExam - Whether this is exam grading (for report generation)
+ * @returns {Promise<Object>} Response with score, feedback, weak areas, chat prefill
  */
-export async function srvGradeQuiz({ answers }) {
+export async function srvGradeQuiz({ answers, questions = [], objectives = [], isExam = false }) {
   const c = getClient();
   if (!c) {
     return {
-      score: 60,
-      feedback: ['(stub) Voorbeeldscore; LLM niet geconfigureerd.'],
+      is_correct: false,
+      score: 0.6,
+      feedback: '(stub) Voorbeeldscore; LLM niet geconfigureerd.',
+      tags: [],
+      next_recommended_focus: ['Herhaal de hoofdpunten', 'Oefen met voorbeelden', 'Vraag uitleg'],
+      weak_areas: [{ objective: 'algemeen', terms: ['kernbegrippen'] }],
+      chat_prefill: 'Ik heb moeite met de hoofdpunten. Ik wil daarop oefenen.',
       notice: 'LLM not configured',
       header: 'disabled',
       policy: { guardrail_triggered: false, reason: 'ok' },
     };
   }
 
-  const system = 'Je beoordeelt kort. Retourneer JSON met {score: 0..100, feedback: string[]}.';
-  const user = `Beoordeel deze antwoorden: ${JSON.stringify(answers ?? []).slice(0, 4000)}`;
+  // Run guardrail checks on answers
+  const allText = Array.isArray(answers) ? answers.join(' ') : '';
+  const guardrailCheck = await runGuardrailChecks(c, allText);
+  
+  const response = {
+    is_correct: false,
+    score: 0.0,
+    feedback: '',
+    tags: [],
+    next_recommended_focus: [],
+    weak_areas: [],
+    chat_prefill: '',
+    header: 'enabled',
+    policy: { guardrail_triggered: false, reason: 'ok' }
+  };
 
-  const resp = await c.chat.completions.create({
-    model: MODELS.grade,
-    temperature: 0.2,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
+  if (!guardrailCheck.passed) {
+    response.feedback = GUARDRAIL_MESSAGE;
+    response.policy = sanitizeGuardrail(response, ['feedback'], guardrailCheck.reason);
+    return response;
+  }
 
-  let score = 0; let feedback = [];
+  const system = `Grade student answers warmly and constructively for Dutch secondary students (age 12–16).
+Always give 1–2 sentences: compliment + 1 improvement suggestion.
+Score from 0.0 to 1.0. Identify weak areas and provide focus recommendations.
+Always respond in Dutch for student-visible text.
+
+Response format:
+{
+  "is_correct": true/false,
+  "score": 0.0-1.0,
+  "feedback": "warm compliment + concrete improvement tip",
+  "tags": ["topic keywords"],
+  "next_recommended_focus": ["specific practice suggestion 1", "suggestion 2", "suggestion 3"],
+  "weak_areas": [{"objective": "learning goal", "terms": ["difficult concepts"]}],
+  "chat_prefill_parts": ["concept 1", "concept 2"]
+}`;
+
+  const user = `Beoordeel deze antwoorden:
+Vragen: ${JSON.stringify(questions.slice(0, 10))}
+Antwoorden: ${JSON.stringify(answers?.slice(0, 10) || [])}
+Leerdoelen: ${JSON.stringify(objectives.slice(0, 5))}
+${isExam ? 'Dit is een toets - geef uitgebreide analyse.' : 'Dit is een quiz vraag.'}`;
+
   try {
+    const resp = await c.chat.completions.create({
+      model: MODELS.grade,
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
+
     const content = resp.choices?.[0]?.message?.content || '{}';
     const json = JSON.parse(content);
-    score = Math.max(0, Math.min(100, Number(json.score) || 0));
-    feedback = Array.isArray(json.feedback) ? json.feedback.map(String).slice(0, 5) : [];
-  } catch (_) { /* keep defaults */ }
+    
+    response.is_correct = Boolean(json.is_correct);
+    response.score = Math.max(0, Math.min(1, Number(json.score) || 0));
+    response.feedback = String(json.feedback || 'Goed gedaan! Blijf oefenen.').slice(0, 300);
+    response.tags = Array.isArray(json.tags) ? json.tags.slice(0, 5) : [];
+    response.next_recommended_focus = Array.isArray(json.next_recommended_focus) ? json.next_recommended_focus.slice(0, 3) : [];
+    response.weak_areas = Array.isArray(json.weak_areas) ? json.weak_areas.slice(0, 3) : [];
+    
+    // Generate chat_prefill from weak areas
+    const weakParts = json.chat_prefill_parts || [];
+    if (weakParts.length === 0 && response.weak_areas.length > 0) {
+      response.weak_areas.forEach(area => {
+        if (area.terms && area.terms.length > 0) {
+          weakParts.push(...area.terms.slice(0, 2));
+        } else if (area.objective) {
+          weakParts.push(area.objective);
+        }
+      });
+    }
+    
+    if (weakParts.length === 1) {
+      response.chat_prefill = `Ik heb moeite met ${weakParts[0]}. Ik wil daarop oefenen.`;
+    } else if (weakParts.length === 2) {
+      response.chat_prefill = `Ik heb moeite met ${weakParts[0]} en ${weakParts[1]}. Ik wil daarop oefenen.`;
+    } else if (weakParts.length >= 3) {
+      response.chat_prefill = `Ik heb moeite met ${weakParts.slice(0, 3).join(', ')}. Ik wil daarop oefenen.`;
+    } else {
+      response.chat_prefill = 'Ik wil meer oefenen met deze stof.';
+    }
+    
+  } catch (error) {
+    // Fallback on error
+    response.score = 0.5;
+    response.feedback = 'Goed geprobeerd! Probeer het nog eens met meer details.';
+    response.next_recommended_focus = ['Herhaal de hoofdpunten', 'Oefen met voorbeelden'];
+    response.chat_prefill = 'Ik wil meer oefenen met deze stof.';
+  }
 
-  return { score, feedback, header: 'enabled', policy: { guardrail_triggered: false, reason: 'ok' } };
+  return response;
 }
