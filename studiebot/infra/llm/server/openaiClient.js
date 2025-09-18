@@ -8,14 +8,139 @@ const PROVIDER = process.env.LLM_PROVIDER || 'openai';
 const MODELS = {
   hints: process.env.OPENAI_MODEL_HINTS || 'gpt-4o-mini',
   grade: process.env.OPENAI_MODEL_GRADE || 'gpt-4o-mini',
+  quiz: process.env.OPENAI_MODEL_QUIZ || 'gpt-4o-mini',
+  exam: process.env.OPENAI_MODEL_EXAM || 'gpt-4o-mini',
   moderation: process.env.OPENAI_MODERATION_MODEL || 'omni-moderation-latest',
 };
+
+const GUARDRAIL_MESSAGE = "Dat hoort niet bij de les. Laten we verdergaan.";
 
 function getClient() {
   if (!ENABLED || PROVIDER !== 'openai') return null;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
   return new OpenAI({ apiKey });
+}
+
+/**
+ * Sanitize response when guardrails are triggered
+ * @param {string[]} textFields - Fields to overwrite with guardrail message
+ * @param {string} reason - Reason for guardrail trigger
+ * @returns {Object} Policy object
+ */
+function sanitizeGuardrail(response, textFields, reason) {
+  textFields.forEach(field => {
+    if (response[field]) {
+      if (Array.isArray(response[field])) {
+        response[field] = [GUARDRAIL_MESSAGE];
+      } else {
+        response[field] = GUARDRAIL_MESSAGE;
+      }
+    }
+  });
+  return { guardrail_triggered: true, reason };
+}
+
+/**
+ * Check for prompt injection patterns
+ * @param {string} text - Text to check
+ * @returns {boolean} True if injection detected
+ */
+function detectPromptInjection(text) {
+  if (!text || typeof text !== 'string') return false;
+  
+  const injectionPatterns = [
+    /ignore\s+all\s+previous/i,
+    /forget\s+all\s+instructions/i,
+    /vergeet\s+alle\s+instructies/i,
+    /negeer\s+alle\s+vorige/i,
+    /bypass\s+all/i,
+    /omzeil\s+alle/i,
+    /sudo\s+/i,
+    /bomb|bom/i,
+    /weapon|wapen/i,
+    /hack|hacking/i,
+    /system\s*:/i,
+    /assistant\s*:/i,
+  ];
+  
+  return injectionPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check relevance of input to educational content
+ * @param {OpenAI} client - OpenAI client
+ * @param {string} text - Text to check
+ * @returns {Promise<string>} 'on_topic' | 'off_topic' | 'not_in_material'
+ */
+async function checkRelevance(client, text) {
+  if (!client || !text) return 'on_topic';
+  
+  try {
+    const response = await client.chat.completions.create({
+      model: MODELS.grade,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `Classify if student input is relevant to educational content. Return JSON: {"relevance": "on_topic"|"off_topic"|"not_in_material"}.
+          
+          on_topic: about lessons, subjects, homework, study questions
+          off_topic: personal life, unrelated topics, entertainment
+          not_in_material: asks about content not in curriculum`
+        },
+        {
+          role: 'user',
+          content: text.slice(0, 500) // Limit length
+        }
+      ]
+    });
+    
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    return result.relevance || 'on_topic';
+  } catch {
+    return 'on_topic'; // Default to allowing if check fails
+  }
+}
+
+/**
+ * Run all guardrail checks
+ * @param {OpenAI} client - OpenAI client
+ * @param {string} text - Text to check
+ * @returns {Promise<Object>} { passed: boolean, reason?: string }
+ */
+async function runGuardrailChecks(client, text) {
+  if (!text) return { passed: true };
+  
+  // Check prompt injection first (fastest)
+  if (detectPromptInjection(text)) {
+    return { passed: false, reason: 'prompt_injection' };
+  }
+  
+  if (!client) return { passed: true };
+  
+  try {
+    // Check moderation
+    const moderation = await client.moderations.create({
+      model: MODELS.moderation,
+      input: text
+    });
+    
+    if (moderation.results?.[0]?.flagged) {
+      return { passed: false, reason: 'unsafe_moderation' };
+    }
+    
+    // Check relevance
+    const relevance = await checkRelevance(client, text);
+    if (relevance !== 'on_topic') {
+      return { passed: false, reason: 'relevance' };
+    }
+    
+    return { passed: true };
+  } catch {
+    return { passed: true }; // Default to allowing if checks fail
+  }
 }
 
 /**
