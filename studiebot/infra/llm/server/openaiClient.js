@@ -1,6 +1,7 @@
 // studiebot/infra/llm/server/openaiClient.js
 import 'server-only';
 import OpenAI from 'openai';
+import { findMaterialForLLM } from '../../db/materialsService';
 
 const ENABLED = process.env.LLM_ENABLED === 'true';
 const PROVIDER = process.env.LLM_PROVIDER || 'openai';
