@@ -81,4 +81,92 @@ describe('LLM Provider Factory', () => {
     expect(result.hints).toEqual([])
     expect(result.notice).toBeUndefined()
   })
+
+  it('web client generates quiz questions correctly', async () => {
+    process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
+    
+    webGenerateQuizQuestion.mockResolvedValueOnce({
+      question_id: 'q-123',
+      type: 'mcq',
+      stem: 'Test question?',
+      choices: ['A', 'B', 'C', 'D'],
+      answer_key: { correct: [0] },
+      objective: 'test-obj',
+      bloom_level: 'remember',
+      difficulty: 'easy',
+      hint: 'Test hint',
+      defined_terms: [],
+      notice: 'success'
+    })
+    
+    const client = getLLMClient()
+    const result = await client.generateQuizQuestion({ 
+      topicId: 'test', 
+      objective: 'test-obj',
+      currentBloom: 'remember',
+      currentDifficulty: 'easy'
+    })
+    
+    expect(result.question_id).toBe('q-123')
+    expect(result.type).toBe('mcq')
+    expect(result.stem).toBe('Test question?')
+    expect(result.choices).toEqual(['A', 'B', 'C', 'D'])
+    expect(result.hint).toBe('Test hint')
+  })
+
+  it('web client generates exams correctly', async () => {
+    process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
+    
+    webGenerateExam.mockResolvedValueOnce({
+      questions: [
+        { question_id: 'q1', stem: 'Question 1', type: 'mcq' },
+        { question_id: 'q2', stem: 'Question 2', type: 'short_answer' }
+      ],
+      blueprint: {
+        by_objective: { 'obj1': 1, 'obj2': 1 },
+        by_level: { 'remember': 1, 'understand': 1 }
+      },
+      notice: 'success'
+    })
+    
+    const client = getLLMClient()
+    const result = await client.generateExam({ 
+      topicId: 'test-topic',
+      blueprint: {},
+      totalQuestions: 2
+    })
+    
+    expect(result.questions).toHaveLength(2)
+    expect(result.questions[0].question_id).toBe('q1')
+    expect(result.blueprint.by_objective).toEqual({ 'obj1': 1, 'obj2': 1 })
+  })
+
+  it('web client handles enhanced grading correctly', async () => {
+    process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
+    
+    webGradeQuiz.mockResolvedValueOnce({
+      is_correct: true,
+      score: 0.85,
+      feedback: 'Goed gedaan! Probeer meer details toe te voegen.',
+      tags: ['geography', 'capitals'],
+      next_recommended_focus: ['Oefen met kaarten', 'Leer hoofdsteden'],
+      weak_areas: [{ objective: 'geography', terms: ['hoofdsteden'] }],
+      chat_prefill: 'Ik heb moeite met hoofdsteden. Ik wil daarop oefenen.',
+      notice: 'success'
+    })
+    
+    const client = getLLMClient()
+    const result = await client.gradeQuiz({ 
+      answers: ['Amsterdam'],
+      questions: ['Wat is de hoofdstad van Nederland?'],
+      objectives: ['geography'],
+      isExam: false
+    })
+    
+    expect(result.is_correct).toBe(true)
+    expect(result.score).toBe(0.85)
+    expect(result.feedback).toBe('Goed gedaan! Probeer meer details toe te voegen.')
+    expect(result.weak_areas).toHaveLength(1)
+    expect(result.chat_prefill).toBe('Ik heb moeite met hoofdsteden. Ik wil daarop oefenen.')
+  })
 })
