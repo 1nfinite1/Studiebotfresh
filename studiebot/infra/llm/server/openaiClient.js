@@ -285,24 +285,7 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
     policy: { guardrail_triggered: false, reason: 'ok' }
   };
 
-  const system = `Generate educational quiz questions for Dutch secondary students (age 12–16).
-Create retrieval-first questions with plausible distractors.
-No explanations in the question stem.
-Always respond in Dutch for student-visible text.
-JSON format required.
-
-Question types: mcq, true_false_explain, short_answer, order_steps, match_terms, why_explain
-
-Response format:
-{
-  "question_id": "string",
-  "type": "mcq",
-  "stem": "question text in Dutch",
-  "choices": ["option A", "option B", "option C", "option D"],
-  "answer_key": {"correct": [0], "explanation": "why this is correct"},
-  "hint": "optional hint string or null",
-  "defined_terms": [{"term": "begrip", "definition": "uitleg"}]
-}`;
+  const system = `You are Studiebot. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material. Return JSON only for exactly one quiz item: question_id, type, stem, choices, answer_key, bloom_level, difficulty, hint|null, defined_terms[]. Keep the wording short and clear for ages 12–16.`;
 
   const user = `Onderwerp: ${topicId || 'algemeen'}
 Leerdoel: ${objective || 'algemene kennis'}
