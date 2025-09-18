@@ -426,7 +426,9 @@ Maak een vraag die past bij dit niveau en onderwerp.`;
  * @returns {Promise<Object>} Response with score, feedback, weak areas, chat prefill
  */
 export async function srvGradeQuiz({ answers, questions = [], objectives = [], isExam = false, subject, grade, chapter, topicId }) {
-  const c = getClient();
+  console.log('[srvGradeQuiz] Starting function');
+  try {
+    const c = getClient();
   if (!c) {
     return {
       is_correct: false,
