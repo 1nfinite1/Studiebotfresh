@@ -144,61 +144,117 @@ async function runGuardrailChecks(client, text) {
 }
 
 /**
- * Generate hints for a study topic
+ * Generate hints for Learn mode (Leren)
  * @param {Object} params - Parameters
  * @param {string} params.topicId - Topic identifier 
  * @param {string} params.text - Student input text
- * @returns {Promise<Object>} Response with hints, notice, header, and policy
+ * @param {string} params.currentBloom - Current Bloom level
+ * @param {string} params.currentDifficulty - Current difficulty
+ * @param {boolean} params.wasCorrect - Whether previous answer was correct
+ * @returns {Promise<Object>} Response with hints, tutor message, follow-up question
  */
-export async function srvGenerateHints({ topicId, text }) {
+export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null }) {
   const c = getClient();
   if (!c) {
     return {
-      hints: [
-        '(stub) Benoem eerst 2-3 kernbegrippen.',
-        '(stub) Leg het in je eigen woorden uit.'
-      ],
+      hints: ['(stub) Benoem eerst 2-3 kernbegrippen.', '(stub) Leg het in je eigen woorden uit.'],
+      tutor_message: '(stub) Probeer de hoofdpunten te benoemen.',
+      follow_up_question: '(stub) Wat weet je al over dit onderwerp?',
+      defined_terms: [],
+      next_bloom: 'remember',
+      next_difficulty: 'easy',
       notice: 'LLM not configured',
       header: 'disabled',
       policy: { guardrail_triggered: false, reason: 'ok' },
     };
   }
 
-  // Moderation (best-effort)
+  // Run guardrail checks
+  const guardrailCheck = await runGuardrailChecks(c, text);
+  
+  const response = {
+    hints: [],
+    tutor_message: '',
+    follow_up_question: '',
+    defined_terms: [],
+    next_bloom: currentBloom,
+    next_difficulty: currentDifficulty,
+    header: 'enabled',
+    policy: { guardrail_triggered: false, reason: 'ok' }
+  };
+
+  if (!guardrailCheck.passed) {
+    response.policy = sanitizeGuardrail(response, ['hints', 'tutor_message', 'follow_up_question'], guardrailCheck.reason);
+    return response;
+  }
+
+  // Adaptive logic
+  let nextBloom = currentBloom;
+  let nextDifficulty = currentDifficulty;
+  
+  if (wasCorrect === true) {
+    // Increase difficulty after 2 consecutive correct (simplified to immediate for now)
+    if (currentDifficulty === 'easy') nextDifficulty = 'medium';
+    else if (currentDifficulty === 'medium') nextDifficulty = 'hard';
+    else if (currentBloom === 'remember') nextBloom = 'understand';
+    else if (currentBloom === 'understand') nextBloom = 'apply';
+  } else if (wasCorrect === false) {
+    // Decrease difficulty/Bloom on incorrect
+    if (currentDifficulty === 'hard') nextDifficulty = 'medium';
+    else if (currentDifficulty === 'medium') nextDifficulty = 'easy';
+    else if (currentBloom === 'apply') nextBloom = 'understand';
+    else if (currentBloom === 'understand') nextBloom = 'remember';
+  }
+
+  const system = `Warm, friendly study coach for Dutch secondary students (age 12–16). JSON only.
+Use simple words. Provide ≤2 sentences explanation.
+If answer is wrong/partial, add 1 extra example sentence.
+Give 1–3 hints (retrieval-first) and exactly 1 check question.
+Always respond in Dutch. Keys/enums remain English.
+
+Response format:
+{
+  "hints": ["short hint 1", "hint 2"],
+  "tutor_message": "≤2 sentences encouragement/explanation",
+  "follow_up_question": "exactly 1 question to check understanding",
+  "defined_terms": [{"term": "begrip", "definition": "uitleg"}]
+}`;
+
+  const user = `Onderwerp: ${topicId || 'algemeen'}
+Leerling antwoord: ${text || 'geen antwoord'}
+Bloom niveau: ${nextBloom}
+Moeilijkheid: ${nextDifficulty}
+Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? 'incorrect' : 'onbekend'}`;
+
   try {
-    const m = await c.moderations.create({ model: MODELS.moderation, input: text || '' });
-    const flagged = Array.isArray(m.results) && m.results[0]?.flagged;
-    if (flagged) {
-      return {
-        hints: [],
-        notice: 'moderation_blocked',
-        header: 'enabled',
-        policy: { guardrail_triggered: true, reason: 'unsafe' },
-      };
-    }
-  } catch (_) { /* ignore moderation errors */ }
+    const resp = await c.chat.completions.create({
+      model: MODELS.hints,
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
 
-  const system = 'Je bent een Nederlandse studie-assistent. Geef 1–3 korte, concrete hints. Antwoord uitsluitend als JSON.';
-  const user = `Onderwerp: ${topicId || ''}\nInbreng leerling: ${text || ''}`;
-
-  const resp = await c.chat.completions.create({
-    model: MODELS.hints,
-    temperature: 0.3,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
-
-  let hints = [];
-  try {
     const content = resp.choices?.[0]?.message?.content || '{}';
     const json = JSON.parse(content);
-    hints = Array.isArray(json.hints) ? json.hints.map(String).slice(0, 3) : [];
-  } catch (_) { hints = []; }
+    
+    response.hints = Array.isArray(json.hints) ? json.hints.slice(0, 3) : [];
+    response.tutor_message = String(json.tutor_message || '').slice(0, 200);
+    response.follow_up_question = String(json.follow_up_question || '').slice(0, 200);
+    response.defined_terms = Array.isArray(json.defined_terms) ? json.defined_terms.slice(0, 5) : [];
+    response.next_bloom = nextBloom;
+    response.next_difficulty = nextDifficulty;
+    
+  } catch (error) {
+    // Fallback on error
+    response.hints = ['Probeer de hoofdpunten te benoemen.'];
+    response.tutor_message = 'Laten we dit stap voor stap bekijken.';
+    response.follow_up_question = 'Wat weet je al over dit onderwerp?';
+  }
 
-  return { hints, header: 'enabled', policy: { guardrail_triggered: false, reason: 'ok' } };
+  return response;
 }
 
 /**
