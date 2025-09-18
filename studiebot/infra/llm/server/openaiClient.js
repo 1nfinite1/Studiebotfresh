@@ -196,6 +196,9 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
     else if (currentBloom === 'understand') nextBloom = 'remember';
   }
 
+  // Try to find relevant study material
+  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  
   const system = `You are Studiebot, a friendly study coach. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material when available. Return JSON only with:
 - tutor_message (≤2 short Dutch sentences)
 - hints (1–3 short bullet hints)
@@ -203,11 +206,25 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
 
 If the input is unclear, ask one brief Dutch clarifying question instead of refusing.`;
 
-  const user = `Onderwerp: ${topicId || 'algemeen'}
+  let user = `Onderwerp: ${topicId || 'algemeen'}
 Leerling antwoord: ${text || 'geen antwoord'}
 Bloom niveau: ${nextBloom}
 Moeilijkheid: ${nextDifficulty}
 Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? 'incorrect' : 'onbekend'}`;
+
+  // Add material context if available
+  if (material) {
+    user += `\n\nStudiemateriaal:`;
+    if (material.summary) {
+      user += `\nSamenvatting: ${material.summary}`;
+    }
+    if (material.glossary && Array.isArray(material.glossary)) {
+      user += `\nGlossary: ${material.glossary.map(term => `${term.term}: ${term.definition}`).join(', ')}`;
+    }
+    if (material.content) {
+      user += `\nInhoud: ${String(material.content).slice(0, 500)}`;
+    }
+  }
 
   try {
     const resp = await c.chat.completions.create({
