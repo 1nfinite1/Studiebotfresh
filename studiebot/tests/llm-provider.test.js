@@ -59,13 +59,24 @@ describe('LLM Provider Factory', () => {
     process.env.NEXT_PUBLIC_LLM_ENABLED = 'true'
     
     // Mock the web client function
-    webGradeQuiz.mockResolvedValueOnce({ score: 85, feedback: ['Good work'], notice: 'enabled' })
+    webGradeQuiz.mockResolvedValueOnce({
+      is_correct: true,
+      score: 0.85,
+      feedback: 'Good work',
+      tags: [],
+      next_recommended_focus: [],
+      weak_areas: [],
+      chat_prefill: '',
+      header: 'enabled',
+      policy: {},
+      notice: 'enabled'
+    })
     
     const client = getLLMClient()
     const result = await client.gradeQuiz({ answers: ['answer1', 'answer2'] })
     
-    expect(result.score).toBe(85)
-    expect(result.feedback).toEqual(['Good work'])
+    expect(result.score).toBe(0.85)
+    expect(result.feedback).toBe('Good work')
     expect(result.notice).toBe('enabled')
   })
 
