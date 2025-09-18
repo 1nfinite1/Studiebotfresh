@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../infra/llm/server/openaiClient', () => ({
   srvGenerateHints: vi.fn(),
   srvGradeQuiz: vi.fn(),
+  srvQuizGenerate: vi.fn(),
+  srvExamGenerate: vi.fn(),
 }))
 
 // Mock NextResponse
@@ -17,7 +19,7 @@ vi.mock('next/server', () => ({
   },
 }))
 
-import { srvGenerateHints, srvGradeQuiz } from '../infra/llm/server/openaiClient'
+import { srvGenerateHints, srvGradeQuiz, srvQuizGenerate, srvExamGenerate } from '../infra/llm/server/openaiClient'
 import { NextResponse } from 'next/server'
 
 describe('LLM API Routes', () => {
