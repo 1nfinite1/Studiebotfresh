@@ -488,26 +488,7 @@ export async function srvExamGenerate({ topicId, blueprint = {}, totalQuestions 
     policy: { guardrail_triggered: false, reason: 'ok' }
   };
 
-  const system = `Generate exam questions for Dutch secondary students (age 12–16).
-Create ${totalQuestions} questions following the blueprint distribution.
-No hints, no definitions in exams.
-Mix question types. Always respond in Dutch for student-visible text.
-
-Response format:
-{
-  "questions": [
-    {
-      "question_id": "string",
-      "type": "mcq|short_answer|true_false_explain",
-      "stem": "question text",
-      "choices": ["options for mcq"],
-      "answer_key": {"correct": [indices], "explanation": "explanation"},
-      "objective": "learning objective",
-      "bloom_level": "remember|understand|apply",
-      "difficulty": "easy|medium|hard"
-    }
-  ]
-}`;
+  const system = `You are Studiebot. All student-visible text must be Dutch. JSON keys/enums remain English. Generate N exam items (no hints or definitions). Keep wording short.`;
 
   const user = `Onderwerp: ${topicId || 'algemeen'}
 Aantal vragen: ${totalQuestions}
