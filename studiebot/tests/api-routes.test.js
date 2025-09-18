@@ -82,7 +82,16 @@ describe('LLM API Routes', () => {
       await POST(mockReq)
 
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { hints: [], notice: 'server_error' },
+        {
+          hints: [],
+          tutor_message: '',
+          follow_up_question: '',
+          defined_terms: [],
+          next_bloom: 'remember',
+          next_difficulty: 'easy',
+          policy: { guardrail_triggered: false, reason: 'server_error' },
+          notice: 'server_error'
+        },
         { status: 500 }
       )
     })
