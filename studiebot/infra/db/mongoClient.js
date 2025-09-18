@@ -39,9 +39,14 @@ export async function getMongoClient() {
  */
 export async function getDatabase() {
   if (!db) {
-    const mongoClient = await getMongoClient();
-    const dbName = process.env.MONGODB_DB || 'studiebot';
-    db = mongoClient.db(dbName);
+    try {
+      const mongoClient = await getMongoClient();
+      const dbName = process.env.MONGODB_DB || 'studiebot';
+      db = mongoClient.db(dbName);
+    } catch (error) {
+      console.error('Failed to get database:', error.message);
+      throw error;
+    }
   }
   
   return db;
