@@ -9,7 +9,10 @@ export async function POST(req) {
       topicId: String(body.topicId || ''),
       objective: String(body.objective || ''),
       currentBloom: body.currentBloom || 'remember',
-      currentDifficulty: body.currentDifficulty || 'easy'
+      currentDifficulty: body.currentDifficulty || 'easy',
+      subject: body.subject,
+      grade: body.grade,
+      chapter: body.chapter
     });
     const headers = new Headers({
       'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled'
