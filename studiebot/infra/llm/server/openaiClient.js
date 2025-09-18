@@ -144,20 +144,23 @@ async function runGuardrailChecks(client, text) {
  * @returns {Promise<Object>} Response with hints, tutor message, follow-up question
  */
 export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null, subject, grade, chapter }) {
-  const c = getClient();
-  if (!c) {
-    return {
-      hints: ['(stub) Benoem eerst 2-3 kernbegrippen.', '(stub) Leg het in je eigen woorden uit.'],
-      tutor_message: '(stub) Probeer de hoofdpunten te benoemen.',
-      follow_up_question: '(stub) Wat weet je al over dit onderwerp?',
-      defined_terms: [],
-      next_bloom: 'remember',
-      next_difficulty: 'easy',
-      notice: 'LLM not configured',
-      header: 'disabled',
-      policy: { guardrail_triggered: false, reason: 'ok' },
-    };
-  }
+  console.log('[srvGenerateHints] Starting function');
+  try {
+    const c = getClient();
+    if (!c) {
+      console.log('[srvGenerateHints] LLM client not available, returning stub');
+      return {
+        hints: ['(stub) Benoem eerst 2-3 kernbegrippen.', '(stub) Leg het in je eigen woorden uit.'],
+        tutor_message: '(stub) Probeer de hoofdpunten te benoemen.',
+        follow_up_question: '(stub) Wat weet je al over dit onderwerp?',
+        defined_terms: [],
+        next_bloom: 'remember',
+        next_difficulty: 'easy',
+        notice: 'LLM not configured',
+        header: 'disabled',
+        policy: { guardrail_triggered: false, reason: 'ok' },
+      };
+    }
 
   // Run guardrail checks
   const guardrailCheck = await runGuardrailChecks(c, text);
