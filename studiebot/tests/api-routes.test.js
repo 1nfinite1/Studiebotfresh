@@ -179,8 +179,13 @@ describe('LLM API Routes', () => {
 
     it('should handle non-array answers', async () => {
       srvGradeQuiz.mockResolvedValue({
-        score: 50,
+        is_correct: false,
+        score: 0.5,
         feedback: 'Try again',
+        tags: [],
+        next_recommended_focus: [],
+        weak_areas: [],
+        chat_prefill: '',
         header: 'disabled',
         policy: {},
         notice: 'disabled'
@@ -197,7 +202,10 @@ describe('LLM API Routes', () => {
       await POST(mockReq)
 
       expect(srvGradeQuiz).toHaveBeenCalledWith({
-        answers: []
+        answers: [],
+        questions: [],
+        objectives: [],
+        isExam: false
       })
     })
   })
