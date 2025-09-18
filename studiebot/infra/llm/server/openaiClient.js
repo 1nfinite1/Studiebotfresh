@@ -392,7 +392,28 @@ Maak een vraag die past bij dit niveau en onderwerp.`;
     response.answer_key = { correct: [], explanation: 'Geef je beste antwoord.' };
   }
 
+  console.log('[srvQuizGenerate] Returning response');
   return response;
+  
+  } catch (outerError) {
+    console.error('[srvQuizGenerate] Outer error caught:', outerError);
+    return {
+      question_id: `error-${Date.now()}`,
+      type: 'short_answer',
+      stem: 'Er ging iets mis bij het genereren van de vraag.',
+      choices: [],
+      answer_key: { correct: [], explanation: 'Probeer het opnieuw.' },
+      objective: objective || 'general',
+      bloom_level: currentBloom,
+      difficulty: currentDifficulty,
+      source_ids: [],
+      hint: null,
+      defined_terms: [],
+      notice: 'server_error',
+      header: 'disabled',
+      policy: { guardrail_triggered: false, reason: 'server_error' },
+    };
+  }
 }
 
 /**
