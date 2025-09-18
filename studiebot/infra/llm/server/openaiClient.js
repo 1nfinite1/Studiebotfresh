@@ -305,12 +305,29 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
 
   const system = `You are Studiebot. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material. Return JSON only for exactly one quiz item: question_id, type, stem, choices, answer_key, bloom_level, difficulty, hint|null, defined_terms[]. Keep the wording short and clear for ages 12–16.`;
 
-  const user = `Onderwerp: ${topicId || 'algemeen'}
+  // Try to find relevant study material
+  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  
+  let user = `Onderwerp: ${topicId || 'algemeen'}
 Leerdoel: ${objective || 'algemene kennis'}
 Bloom niveau: ${currentBloom}
 Moeilijkheid: ${currentDifficulty}
 
 Maak een vraag die past bij dit niveau en onderwerp.`;
+
+  // Add material context if available
+  if (material) {
+    user += `\n\nStudiemateriaal:`;
+    if (material.summary) {
+      user += `\nSamenvatting: ${material.summary}`;
+    }
+    if (material.glossary && Array.isArray(material.glossary)) {
+      user += `\nGlossary: ${material.glossary.map(term => `${term.term}: ${term.definition}`).join(', ')}`;
+    }
+    if (material.content) {
+      user += `\nInhoud: ${String(material.content).slice(0, 500)}`;
+    }
+  }
 
   try {
     const resp = await c.chat.completions.create({
