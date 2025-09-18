@@ -266,7 +266,7 @@ Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? '
  * @param {string} params.currentDifficulty - Current difficulty
  * @returns {Promise<Object>} Quiz question with hint
  */
-export async function srvQuizGenerate({ topicId, objective, currentBloom = 'remember', currentDifficulty = 'easy' }) {
+export async function srvQuizGenerate({ topicId, objective, currentBloom = 'remember', currentDifficulty = 'easy', subject, grade, chapter }) {
   const c = getClient();
   if (!c) {
     return {
