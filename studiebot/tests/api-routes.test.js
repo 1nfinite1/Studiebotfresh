@@ -195,9 +195,10 @@ describe('LLM API Routes', () => {
           next_recommended_focus: [],
           weak_areas: [],
           chat_prefill: '',
+          policy: { guardrail_triggered: false, reason: 'server_error' },
           notice: 'server_error'
         },
-        { status: 500 }
+        { status: 500, headers: expect.any(Headers) }
       )
     })
 
