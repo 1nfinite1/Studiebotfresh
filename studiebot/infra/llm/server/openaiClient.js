@@ -554,7 +554,24 @@ ${isExam ? 'Dit is een toets - geef uitgebreide analyse.' : 'Dit is een quiz vra
     response.chat_prefill = 'Ik wil meer oefenen met deze stof.';
   }
 
+  console.log('[srvGradeQuiz] Returning response');
   return response;
+  
+  } catch (outerError) {
+    console.error('[srvGradeQuiz] Outer error caught:', outerError);
+    return {
+      is_correct: false,
+      score: 0.0,
+      feedback: 'Er ging iets mis bij het beoordelen.',
+      tags: [],
+      next_recommended_focus: ['Probeer het opnieuw', 'Vraag om hulp'],
+      weak_areas: [],
+      chat_prefill: 'Ik wil meer hulp bij deze stof.',
+      notice: 'server_error',
+      header: 'disabled',
+      policy: { guardrail_triggered: false, reason: 'server_error' },
+    };
+  }
 }
 
 /**
