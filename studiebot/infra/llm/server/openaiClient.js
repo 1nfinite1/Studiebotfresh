@@ -68,7 +68,7 @@ function detectPromptInjection(text) {
 }
 
 /**
- * Check relevance of input to educational content
+ * Check relevance of input to educational content (relaxed)
  * @param {OpenAI} client - OpenAI client
  * @param {string} text - Text to check
  * @returns {Promise<string>} 'on_topic' | 'off_topic' | 'not_in_material'
@@ -76,32 +76,21 @@ function detectPromptInjection(text) {
 async function checkRelevance(client, text) {
   if (!client || !text) return 'on_topic';
   
-  try {
-    const response = await client.chat.completions.create({
-      model: MODELS.grade,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: `Classify if student input is relevant to educational content. Return JSON: {"relevance": "on_topic"|"off_topic"|"not_in_material"}.
-          
-          on_topic: about lessons, subjects, homework, study questions
-          off_topic: personal life, unrelated topics, entertainment
-          not_in_material: asks about content not in curriculum`
-        },
-        {
-          role: 'user',
-          content: text.slice(0, 500) // Limit length
-        }
-      ]
-    });
-    
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-    return result.relevance || 'on_topic';
-  } catch {
-    return 'on_topic'; // Default to allowing if check fails
+  // Relax relevance gating - treat common uncertainty expressions as on-topic
+  const uncertaintyPatterns = [
+    /ik\s+weet\s+(bijna\s+)?niets/i,
+    /ik\s+weet\s+(niet\s+veel|weinig)/i,
+    /geen\s+idee/i,
+    /weet\s+ik\s+(niet|niets)/i,
+  ];
+  
+  if (uncertaintyPatterns.some(pattern => pattern.test(text))) {
+    return 'on_topic'; // Allow uncertainty expressions
   }
+  
+  // For now, disable strict relevance checking and default to allowing
+  // This can be re-enabled later if needed
+  return 'on_topic';
 }
 
 /**
