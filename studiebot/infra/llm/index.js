@@ -1,4 +1,4 @@
-import { webGenerateHints, webGradeQuiz } from './webClient';
+import { webGenerateHints, webGenerateQuizQuestion, webGradeQuiz, webGenerateExam } from './webClient';
 import noopLLM from './noopClient';
 
 /**
@@ -11,13 +11,54 @@ export function getLLMClient() {
   if (!enabled) return noopLLM;
 
   return {
-    async generateHints({ topicId, text }) {
-      const res = await webGenerateHints({ topicId, text });
-      return { hints: Array.isArray(res.hints) ? res.hints : [], notice: res.notice };
+    async generateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect }) {
+      const res = await webGenerateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect });
+      return {
+        hints: Array.isArray(res.hints) ? res.hints : [],
+        tutor_message: res.tutor_message,
+        follow_up_question: res.follow_up_question,
+        defined_terms: Array.isArray(res.defined_terms) ? res.defined_terms : [],
+        next_bloom: res.next_bloom,
+        next_difficulty: res.next_difficulty,
+        notice: res.notice
+      };
     },
-    async gradeQuiz({ answers }) {
-      const res = await webGradeQuiz({ answers });
-      return { score: Number(res.score) || 0, feedback: Array.isArray(res.feedback) ? res.feedback : [], notice: res.notice };
+    async generateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty }) {
+      const res = await webGenerateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty });
+      return {
+        question_id: res.question_id,
+        type: res.type,
+        stem: res.stem,
+        choices: Array.isArray(res.choices) ? res.choices : [],
+        answer_key: res.answer_key || {},
+        objective: res.objective,
+        bloom_level: res.bloom_level,
+        difficulty: res.difficulty,
+        hint: res.hint,
+        defined_terms: Array.isArray(res.defined_terms) ? res.defined_terms : [],
+        notice: res.notice
+      };
+    },
+    async gradeQuiz({ answers, questions, objectives, isExam }) {
+      const res = await webGradeQuiz({ answers, questions, objectives, isExam });
+      return {
+        is_correct: res.is_correct,
+        score: Number(res.score) || 0,
+        feedback: res.feedback,
+        tags: Array.isArray(res.tags) ? res.tags : [],
+        next_recommended_focus: Array.isArray(res.next_recommended_focus) ? res.next_recommended_focus : [],
+        weak_areas: Array.isArray(res.weak_areas) ? res.weak_areas : [],
+        chat_prefill: res.chat_prefill,
+        notice: res.notice
+      };
+    },
+    async generateExam({ topicId, blueprint, totalQuestions }) {
+      const res = await webGenerateExam({ topicId, blueprint, totalQuestions });
+      return {
+        questions: Array.isArray(res.questions) ? res.questions : [],
+        blueprint: res.blueprint || {},
+        notice: res.notice
+      };
     },
   };
 }
