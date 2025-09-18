@@ -142,7 +142,7 @@ async function runGuardrailChecks(client, text) {
  * @param {boolean} params.wasCorrect - Whether previous answer was correct
  * @returns {Promise<Object>} Response with hints, tutor message, follow-up question
  */
-export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null }) {
+export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null, subject, grade, chapter }) {
   const c = getClient();
   if (!c) {
     return {
