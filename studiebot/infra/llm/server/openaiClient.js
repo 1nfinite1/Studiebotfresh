@@ -146,6 +146,7 @@ async function runGuardrailChecks(client, text) {
 export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null, subject, grade, chapter }) {
   console.log('[srvGenerateHints] Starting function');
   try {
+    try {
     const c = getClient();
     if (!c) {
       console.log('[srvGenerateHints] LLM client not available, returning stub');
