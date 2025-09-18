@@ -371,7 +371,7 @@ Maak een vraag die past bij dit niveau en onderwerp.`;
  * @param {boolean} params.isExam - Whether this is exam grading (for report generation)
  * @returns {Promise<Object>} Response with score, feedback, weak areas, chat prefill
  */
-export async function srvGradeQuiz({ answers, questions = [], objectives = [], isExam = false }) {
+export async function srvGradeQuiz({ answers, questions = [], objectives = [], isExam = false, subject, grade, chapter, topicId }) {
   const c = getClient();
   if (!c) {
     return {
