@@ -52,7 +52,10 @@ describe('LLM API Routes', () => {
 
       expect(srvGenerateHints).toHaveBeenCalledWith({
         topicId: 'test-topic',
-        text: 'test text'
+        text: 'test text',
+        currentBloom: 'remember',
+        currentDifficulty: 'easy',
+        wasCorrect: undefined
       })
 
       expect(NextResponse.json).toHaveBeenCalledWith(
