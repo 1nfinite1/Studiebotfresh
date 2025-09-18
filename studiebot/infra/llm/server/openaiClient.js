@@ -375,21 +375,13 @@ export async function srvGradeQuiz({ answers, questions = [], objectives = [], i
     return response;
   }
 
-  const system = `Grade student answers warmly and constructively for Dutch secondary students (age 12–16).
-Always give 1–2 sentences: compliment + 1 improvement suggestion.
-Score from 0.0 to 1.0. Identify weak areas and provide focus recommendations.
-Always respond in Dutch for student-visible text.
-
-Response format:
-{
-  "is_correct": true/false,
-  "score": 0.0-1.0,
-  "feedback": "warm compliment + concrete improvement tip",
-  "tags": ["topic keywords"],
-  "next_recommended_focus": ["specific practice suggestion 1", "suggestion 2", "suggestion 3"],
-  "weak_areas": [{"objective": "learning goal", "terms": ["difficult concepts"]}],
-  "chat_prefill_parts": ["concept 1", "concept 2"]
-}`;
+  const system = `You are Studiebot. All student-visible text must be Dutch. JSON keys/enums remain English. Compare the student's answer to the material and return JSON only with:
+- is_correct
+- score (0..1)
+- feedback (1–2 short Dutch sentences: one compliment + one improvement)
+- weak_areas[]
+- next_recommended_focus[] (max 3)
+- chat_prefill (one Dutch sentence summarising what to practise)`;
 
   const user = `Beoordeel deze antwoorden:
 Vragen: ${JSON.stringify(questions.slice(0, 10))}
