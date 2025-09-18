@@ -10,7 +10,10 @@ export async function POST(req) {
       text: String(body.text || ''),
       currentBloom: body.currentBloom || 'remember',
       currentDifficulty: body.currentDifficulty || 'easy',
-      wasCorrect: body.wasCorrect
+      wasCorrect: body.wasCorrect,
+      subject: body.subject,
+      grade: body.grade,
+      chapter: body.chapter
     });
     const headers = new Headers({
       'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled'
