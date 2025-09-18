@@ -197,7 +197,13 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
   }
 
   // Try to find relevant study material
-  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  let material = null;
+  try {
+    material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  } catch (error) {
+    console.error('Failed to fetch material for hints:', error.message);
+    // Continue without material - don't block the LLM call
+  }
   
   const system = `You are Studiebot, a friendly study coach. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material when available. Return JSON only with:
 - tutor_message (≤2 short Dutch sentences)
@@ -306,7 +312,13 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
   const system = `You are Studiebot. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material. Return JSON only for exactly one quiz item: question_id, type, stem, choices, answer_key, bloom_level, difficulty, hint|null, defined_terms[]. Keep the wording short and clear for ages 12–16.`;
 
   // Try to find relevant study material
-  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  let material = null;
+  try {
+    material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  } catch (error) {
+    console.error('Failed to fetch material for hints:', error.message);
+    // Continue without material - don't block the LLM call
+  }
   
   let user = `Onderwerp: ${topicId || 'algemeen'}
 Leerdoel: ${objective || 'algemene kennis'}
@@ -419,7 +431,13 @@ export async function srvGradeQuiz({ answers, questions = [], objectives = [], i
 - chat_prefill (one Dutch sentence summarising what to practise)`;
 
   // Try to find relevant study material
-  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  let material = null;
+  try {
+    material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  } catch (error) {
+    console.error('Failed to fetch material for hints:', error.message);
+    // Continue without material - don't block the LLM call
+  }
   
   let user = `Beoordeel deze antwoorden:
 Vragen: ${JSON.stringify(questions.slice(0, 10))}
