@@ -10,7 +10,16 @@ export async function POST(req) {
     const objectives = Array.isArray(body.objectives) ? body.objectives : [];
     const isExam = Boolean(body.isExam);
     
-    const res = await srvGradeQuiz({ answers, questions, objectives, isExam });
+    const res = await srvGradeQuiz({ 
+      answers, 
+      questions, 
+      objectives, 
+      isExam,
+      subject: body.subject,
+      grade: body.grade,
+      chapter: body.chapter,
+      topicId: body.topicId
+    });
     const headers = new Headers({
       'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled'
     });
