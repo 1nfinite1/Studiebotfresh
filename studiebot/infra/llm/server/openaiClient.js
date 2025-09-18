@@ -258,6 +258,111 @@ Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? '
 }
 
 /**
+ * Generate quiz question for Quiz mode (Overhoren)
+ * @param {Object} params - Parameters
+ * @param {string} params.topicId - Topic identifier
+ * @param {string} params.objective - Learning objective
+ * @param {string} params.currentBloom - Current Bloom level
+ * @param {string} params.currentDifficulty - Current difficulty
+ * @returns {Promise<Object>} Quiz question with hint
+ */
+export async function srvQuizGenerate({ topicId, objective, currentBloom = 'remember', currentDifficulty = 'easy' }) {
+  const c = getClient();
+  if (!c) {
+    return {
+      question_id: 'stub-q1',
+      type: 'mcq',
+      stem: '(stub) Wat is de hoofdstad van Nederland?',
+      choices: ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht'],
+      answer_key: { correct: [0], explanation: '(stub) Amsterdam is de hoofdstad.' },
+      objective: objective || 'stub-objective',
+      bloom_level: currentBloom,
+      difficulty: currentDifficulty,
+      source_ids: [],
+      hint: '(stub) Denk aan de grootste stad.',
+      defined_terms: [],
+      notice: 'LLM not configured',
+      header: 'disabled',
+      policy: { guardrail_triggered: false, reason: 'ok' },
+    };
+  }
+
+  const response = {
+    question_id: `q-${Date.now()}`,
+    type: 'mcq',
+    stem: '',
+    choices: [],
+    answer_key: { correct: [], explanation: '' },
+    objective: objective || 'general',
+    bloom_level: currentBloom,
+    difficulty: currentDifficulty,
+    source_ids: [],
+    hint: null,
+    defined_terms: [],
+    header: 'enabled',
+    policy: { guardrail_triggered: false, reason: 'ok' }
+  };
+
+  const system = `Generate educational quiz questions for Dutch secondary students (age 12–16).
+Create retrieval-first questions with plausible distractors.
+No explanations in the question stem.
+Always respond in Dutch for student-visible text.
+JSON format required.
+
+Question types: mcq, true_false_explain, short_answer, order_steps, match_terms, why_explain
+
+Response format:
+{
+  "question_id": "string",
+  "type": "mcq",
+  "stem": "question text in Dutch",
+  "choices": ["option A", "option B", "option C", "option D"],
+  "answer_key": {"correct": [0], "explanation": "why this is correct"},
+  "hint": "optional hint string or null",
+  "defined_terms": [{"term": "begrip", "definition": "uitleg"}]
+}`;
+
+  const user = `Onderwerp: ${topicId || 'algemeen'}
+Leerdoel: ${objective || 'algemene kennis'}
+Bloom niveau: ${currentBloom}
+Moeilijkheid: ${currentDifficulty}
+
+Maak een vraag die past bij dit niveau en onderwerp.`;
+
+  try {
+    const resp = await c.chat.completions.create({
+      model: MODELS.quiz,
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
+
+    const content = resp.choices?.[0]?.message?.content || '{}';
+    const json = JSON.parse(content);
+    
+    response.question_id = json.question_id || response.question_id;
+    response.type = json.type || 'mcq';
+    response.stem = String(json.stem || '').slice(0, 500);
+    response.choices = Array.isArray(json.choices) ? json.choices.slice(0, 6) : [];
+    response.answer_key = json.answer_key || response.answer_key;
+    response.hint = json.hint && typeof json.hint === 'string' ? json.hint.slice(0, 200) : null;
+    response.defined_terms = Array.isArray(json.defined_terms) ? json.defined_terms.slice(0, 5) : [];
+    
+  } catch (error) {
+    // Fallback on error
+    response.stem = 'Wat kun je vertellen over dit onderwerp?';
+    response.type = 'short_answer';
+    response.choices = [];
+    response.answer_key = { correct: [], explanation: 'Geef je beste antwoord.' };
+  }
+
+  return response;
+}
+
+/**
  * Grade quiz answers
  * @param {Object} params - Parameters
  * @param {string[]} params.answers - Array of student answers
