@@ -263,7 +263,23 @@ Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? '
     response.follow_up_question = 'Wat weet je al over dit onderwerp?';
   }
 
+  console.log('[srvGenerateHints] Returning response');
   return response;
+  
+  } catch (outerError) {
+    console.error('[srvGenerateHints] Outer error caught:', outerError);
+    return {
+      hints: ['Er ging iets mis. Probeer het opnieuw.'],
+      tutor_message: 'Er is een fout opgetreden.',
+      follow_up_question: 'Kun je je vraag opnieuw stellen?',
+      defined_terms: [],
+      next_bloom: 'remember',
+      next_difficulty: 'easy',
+      notice: 'server_error',
+      header: 'disabled',
+      policy: { guardrail_triggered: false, reason: 'server_error' },
+    };
+  }
 }
 
 /**
