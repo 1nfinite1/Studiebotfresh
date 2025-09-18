@@ -29,6 +29,9 @@ export async function POST(req) {
       { headers }
     );
   } catch {
+    const headers = new Headers({
+      'X-Studiebot-LLM': 'disabled'
+    });
     return NextResponse.json({
       is_correct: false,
       score: 0,
@@ -37,7 +40,8 @@ export async function POST(req) {
       next_recommended_focus: [],
       weak_areas: [],
       chat_prefill: '',
+      policy: { guardrail_triggered: false, reason: 'server_error' },
       notice: 'server_error'
-    }, { status: 500 });
+    }, { status: 500, headers });
   }
 }
