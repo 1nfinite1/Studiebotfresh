@@ -33,6 +33,9 @@ export async function POST(req) {
       { headers }
     );
   } catch {
+    const headers = new Headers({
+      'X-Studiebot-LLM': 'disabled'
+    });
     return NextResponse.json({
       question_id: 'error',
       type: 'short_answer',
@@ -45,7 +48,8 @@ export async function POST(req) {
       source_ids: [],
       hint: null,
       defined_terms: [],
+      policy: { guardrail_triggered: false, reason: 'server_error' },
       notice: 'server_error'
-    }, { status: 500 });
+    }, { status: 500, headers });
   }
 }
