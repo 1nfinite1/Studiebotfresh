@@ -292,7 +292,9 @@ Vorig antwoord was: ${wasCorrect === true ? 'correct' : wasCorrect === false ? '
  * @returns {Promise<Object>} Quiz question with hint
  */
 export async function srvQuizGenerate({ topicId, objective, currentBloom = 'remember', currentDifficulty = 'easy', subject, grade, chapter }) {
-  const c = getClient();
+  console.log('[srvQuizGenerate] Starting function');
+  try {
+    const c = getClient();
   if (!c) {
     return {
       question_id: 'stub-q1',
