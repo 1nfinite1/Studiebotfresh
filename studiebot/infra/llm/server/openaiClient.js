@@ -195,19 +195,12 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
     else if (currentBloom === 'understand') nextBloom = 'remember';
   }
 
-  const system = `Warm, friendly study coach for Dutch secondary students (age 12–16). JSON only.
-Use simple words. Provide ≤2 sentences explanation.
-If answer is wrong/partial, add 1 extra example sentence.
-Give 1–3 hints (retrieval-first) and exactly 1 check question.
-Always respond in Dutch. Keys/enums remain English.
+  const system = `You are Studiebot, a friendly study coach. All student-visible text must be Dutch. JSON keys/enums remain English. Use the provided study material when available. Return JSON only with:
+- tutor_message (≤2 short Dutch sentences)
+- hints (1–3 short bullet hints)
+- follow_up_question (exactly 1 Dutch question)
 
-Response format:
-{
-  "hints": ["short hint 1", "hint 2"],
-  "tutor_message": "≤2 sentences encouragement/explanation",
-  "follow_up_question": "exactly 1 question to check understanding",
-  "defined_terms": [{"term": "begrip", "definition": "uitleg"}]
-}`;
+If the input is unclear, ask one brief Dutch clarifying question instead of refusing.`;
 
   const user = `Onderwerp: ${topicId || 'algemeen'}
 Leerling antwoord: ${text || 'geen antwoord'}
