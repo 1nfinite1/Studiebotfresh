@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+X-Frame-Options: ALLOWALL
+Content-Security-Policy: frame-ancestors *;
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: *
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch
+content-type: application/json
+x-studiebot-llm: disabled
+Date: Thu, 18 Sep 2025 06:10:41 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
