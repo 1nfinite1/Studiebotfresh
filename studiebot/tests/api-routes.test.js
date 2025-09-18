@@ -172,7 +172,16 @@ describe('LLM API Routes', () => {
       await POST(mockReq)
 
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { score: 0, feedback: [], notice: 'server_error' },
+        {
+          is_correct: false,
+          score: 0,
+          feedback: 'Er ging iets mis bij het beoordelen.',
+          tags: [],
+          next_recommended_focus: [],
+          weak_areas: [],
+          chat_prefill: '',
+          notice: 'server_error'
+        },
         { status: 500 }
       )
     })
