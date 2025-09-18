@@ -108,35 +108,51 @@ describe('LLM API Routes', () => {
   })
 
   describe('POST /api/llm/grade-quiz', () => {
-    it('should handle successful quiz grading', async () => {
+    it('web client handles gradeQuiz correctly', async () => {
       srvGradeQuiz.mockResolvedValue({
-        score: 85,
-        feedback: ['Good work', 'Well done'],
+        is_correct: true,
+        score: 0.85,
+        feedback: 'Good work. Well done!',
+        tags: ['test'],
+        next_recommended_focus: ['Keep practicing'],
+        weak_areas: [],
+        chat_prefill: 'I want to practice more.',
         header: 'enabled',
         policy: { guardrail_triggered: false },
-        notice: 'success'
+        notice: 'enabled'
       })
 
       const { POST } = await import('../app/api/llm/grade-quiz/route.js')
       
       const mockReq = {
         json: vi.fn().mockResolvedValue({
-          answers: ['Answer 1', 'Answer 2']
+          answers: ['Answer 1', 'Answer 2'],
+          questions: ['Question 1', 'Question 2'],
+          objectives: ['obj1', 'obj2'],
+          isExam: false
         })
       }
 
       const response = await POST(mockReq)
 
       expect(srvGradeQuiz).toHaveBeenCalledWith({
-        answers: ['Answer 1', 'Answer 2']
+        answers: ['Answer 1', 'Answer 2'],
+        questions: ['Question 1', 'Question 2'],
+        objectives: ['obj1', 'obj2'],
+        isExam: false
       })
 
       expect(NextResponse.json).toHaveBeenCalledWith(
         {
-          score: 85,
-          feedback: ['Good work', 'Well done'],
+          is_correct: true,
+          score: 0.85,
+          feedback: 'Good work. Well done!',
+          tags: ['test'],
+          next_recommended_focus: ['Keep practicing'],
+          weak_areas: [],
+          chat_prefill: 'I want to practice more.',
           policy: { guardrail_triggered: false },
-          notice: 'success'
+          notice: 'enabled'
         },
         {
           headers: expect.any(Headers)
