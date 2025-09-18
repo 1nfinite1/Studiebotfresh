@@ -61,6 +61,11 @@ describe('LLM API Routes', () => {
       expect(NextResponse.json).toHaveBeenCalledWith(
         {
           hints: ['Test hint 1', 'Test hint 2'],
+          tutor_message: '',
+          follow_up_question: '',
+          defined_terms: [],
+          next_bloom: 'remember',
+          next_difficulty: 'easy',
           policy: { guardrail_triggered: false },
           notice: 'success'
         },
