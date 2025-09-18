@@ -418,11 +418,28 @@ export async function srvGradeQuiz({ answers, questions = [], objectives = [], i
 - next_recommended_focus[] (max 3)
 - chat_prefill (one Dutch sentence summarising what to practise)`;
 
-  const user = `Beoordeel deze antwoorden:
+  // Try to find relevant study material
+  const material = await findMaterialForLLM(topicId, subject, grade, chapter);
+  
+  let user = `Beoordeel deze antwoorden:
 Vragen: ${JSON.stringify(questions.slice(0, 10))}
 Antwoorden: ${JSON.stringify(answers?.slice(0, 10) || [])}
 Leerdoelen: ${JSON.stringify(objectives.slice(0, 5))}
 ${isExam ? 'Dit is een toets - geef uitgebreide analyse.' : 'Dit is een quiz vraag.'}`;
+
+  // Add material context if available
+  if (material) {
+    user += `\n\nStudiemateriaal voor beoordeling:`;
+    if (material.summary) {
+      user += `\nSamenvatting: ${material.summary}`;
+    }
+    if (material.glossary && Array.isArray(material.glossary)) {
+      user += `\nGlossary: ${material.glossary.map(term => `${term.term}: ${term.definition}`).join(', ')}`;
+    }
+    if (material.content) {
+      user += `\nInhoud: ${String(material.content).slice(0, 500)}`;
+    }
+  }
 
   try {
     const resp = await c.chat.completions.create({
