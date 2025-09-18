@@ -485,3 +485,131 @@ ${isExam ? 'Dit is een toets - geef uitgebreide analyse.' : 'Dit is een quiz vra
 
   return response;
 }
+
+/**
+ * Generate exam questions according to blueprint (optional)
+ * @param {Object} params - Parameters
+ * @param {string} params.topicId - Topic identifier
+ * @param {Object} params.blueprint - Exam blueprint
+ * @param {number} params.totalQuestions - Total number of questions
+ * @returns {Promise<Object>} Exam with questions and blueprint
+ */
+export async function srvExamGenerate({ topicId, blueprint = {}, totalQuestions = 5 }) {
+  const c = getClient();
+  if (!c) {
+    return {
+      questions: Array.from({ length: totalQuestions }, (_, i) => ({
+        question_id: `stub-q${i + 1}`,
+        type: 'mcq',
+        stem: `(stub) Vraag ${i + 1} over ${topicId || 'algemeen'}`,
+        choices: ['Optie A', 'Optie B', 'Optie C', 'Optie D'],
+        answer_key: { correct: [0], explanation: '(stub) Uitleg' },
+        objective: `objective-${i + 1}`,
+        bloom_level: i < 2 ? 'remember' : i < 4 ? 'understand' : 'apply',
+        difficulty: 'medium',
+        source_ids: [],
+        hint: null, // No hints in exams
+        defined_terms: [], // No definitions in exams
+      })),
+      blueprint: {
+        by_objective: { 'OB1': 2, 'OB2': 2, 'OB3': 1 },
+        by_level: { 'remember': 2, 'understand': 2, 'apply': 1 }
+      },
+      notice: 'LLM not configured',
+      header: 'disabled',
+      policy: { guardrail_triggered: false, reason: 'ok' },
+    };
+  }
+
+  const response = {
+    questions: [],
+    blueprint: {
+      by_objective: {},
+      by_level: { remember: 0, understand: 0, apply: 0 }
+    },
+    header: 'enabled',
+    policy: { guardrail_triggered: false, reason: 'ok' }
+  };
+
+  const system = `Generate exam questions for Dutch secondary students (age 12–16).
+Create ${totalQuestions} questions following the blueprint distribution.
+No hints, no definitions in exams.
+Mix question types. Always respond in Dutch for student-visible text.
+
+Response format:
+{
+  "questions": [
+    {
+      "question_id": "string",
+      "type": "mcq|short_answer|true_false_explain",
+      "stem": "question text",
+      "choices": ["options for mcq"],
+      "answer_key": {"correct": [indices], "explanation": "explanation"},
+      "objective": "learning objective",
+      "bloom_level": "remember|understand|apply",
+      "difficulty": "easy|medium|hard"
+    }
+  ]
+}`;
+
+  const user = `Onderwerp: ${topicId || 'algemeen'}
+Aantal vragen: ${totalQuestions}
+Blueprint: ${JSON.stringify(blueprint)}
+
+Maak een toets met diverse vraagtypen. Geen hints of definities.`;
+
+  try {
+    const resp = await c.chat.completions.create({
+      model: MODELS.exam,
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
+
+    const content = resp.choices?.[0]?.message?.content || '{}';
+    const json = JSON.parse(content);
+    
+    if (Array.isArray(json.questions)) {
+      response.questions = json.questions.slice(0, totalQuestions).map(q => ({
+        question_id: q.question_id || `q-${Date.now()}-${Math.random()}`,
+        type: q.type || 'short_answer',
+        stem: String(q.stem || '').slice(0, 500),
+        choices: Array.isArray(q.choices) ? q.choices.slice(0, 6) : [],
+        answer_key: q.answer_key || { correct: [], explanation: '' },
+        objective: q.objective || 'general',
+        bloom_level: q.bloom_level || 'remember',
+        difficulty: q.difficulty || 'medium',
+        source_ids: [],
+        hint: null, // Always null for exams
+        defined_terms: [], // Always empty for exams
+      }));
+      
+      // Calculate actual blueprint
+      response.questions.forEach(q => {
+        response.blueprint.by_level[q.bloom_level] = (response.blueprint.by_level[q.bloom_level] || 0) + 1;
+        response.blueprint.by_objective[q.objective] = (response.blueprint.by_objective[q.objective] || 0) + 1;
+      });
+    }
+    
+  } catch (error) {
+    // Return fallback questions on error
+    response.questions = Array.from({ length: Math.min(totalQuestions, 3) }, (_, i) => ({
+      question_id: `fallback-q${i + 1}`,
+      type: 'short_answer',
+      stem: `Leg uit wat je weet over ${topicId || 'dit onderwerp'}.`,
+      choices: [],
+      answer_key: { correct: [], explanation: 'Geef een volledig antwoord.' },
+      objective: 'general',
+      bloom_level: 'understand',
+      difficulty: 'medium',
+      source_ids: [],
+      hint: null,
+      defined_terms: [],
+    }));
+  }
+
+  return response;
+}
