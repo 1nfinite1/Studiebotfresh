@@ -22,13 +22,19 @@ function toUiItem(item) {
   const size = item.size ?? item.file?.size ?? null;
   const status = item.status || 'ready';
   const createdAt = item.createdAt || item.created_at || null;
+  const setId = item.setId || id; // UI expects setId; use id when absent
+  const uploader = item.uploader || 'docent';
+  const segments = typeof item.segments === 'number' ? item.segments : 0;
   return {
     id,
+    setId,
     filename,
     type,
     size,
     status,
     createdAt,
+    uploader,
+    segments,
     material_id: item.material_id || id,
     storage: item.storage || null,
     subject: item.subject ?? null,
@@ -75,7 +81,7 @@ export async function GET(req) {
       items = [];
     }
 
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list' }));
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_v2' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));
   }

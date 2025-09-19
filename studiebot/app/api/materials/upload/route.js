@@ -83,12 +83,15 @@ export async function POST(req) {
         material_id,
         // UI-friendly fields
         id: material_id,
+        setId: material_id,
         filename,
         mime,
         type: mime === 'application/pdf' ? 'pdf' : 'unknown',
         size: buffer.length,
         status: 'ready',
         createdAt: nowIso,
+        uploader: 'docent',
+        segments: 0,
         // domain fields
         subject: subject || null,
         topic: topic || null,
@@ -113,9 +116,12 @@ export async function POST(req) {
           size: doc.size,
           status: doc.status,
           createdAt: doc.createdAt,
+          setId: doc.setId,
+          uploader: doc.uploader,
+          segments: doc.segments,
         },
         storage: { driver: 'gridfs', file_id: fileId },
-      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored' }));
+      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_v2' }));
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }
