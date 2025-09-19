@@ -9,8 +9,8 @@ import json
 import sys
 from typing import Dict, Any, List
 
-# Base URL for the Next.js server (external URL)
-BASE_URL = "https://834d0a30-ecdf-42af-8e12-553635ca737a.preview.emergentagent.com"
+# Base URL for the Next.js server (local)
+BASE_URL = "http://localhost:3000"
 
 class StudiebotLLMTester:
     def __init__(self):
