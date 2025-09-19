@@ -50,18 +50,15 @@ export async function POST(req) {
       return err(400, 'Alleen PDF-bestanden zijn toegestaan (application/pdf).', 'materials/upload', { db_ok: false });
     }
 
-    // Size check using provided size if available
     if (typeof file.size === 'number' && file.size > MAX_BYTES) {
       return err(413, `Bestand te groot (max ${MAX_BYTES} bytes).`, 'materials/upload', { db_ok: false });
     }
 
-    // Read to buffer and enforce limit
     const buffer = Buffer.from(await file.arrayBuffer());
     if (buffer.length > MAX_BYTES) {
       return err(413, `Bestand te groot (max ${MAX_BYTES} bytes).`, 'materials/upload', { db_ok: false });
     }
 
-    // Store to GridFS and metadata to materials
     try {
       const db = await getDatabase();
       const bucket = new GridFSBucket(db, { bucketName: BUCKET_NAME });
@@ -81,14 +78,24 @@ export async function POST(req) {
       const materials = db.collection('materials');
 
       const material_id = `mat_${randomUUID()}`;
+      const nowIso = new Date().toISOString();
       const doc = {
         material_id,
+        // UI-friendly fields
+        id: material_id,
+        filename,
+        mime,
+        type: mime === 'application/pdf' ? 'pdf' : 'unknown',
+        size: buffer.length,
+        status: 'ready',
+        createdAt: nowIso,
+        // domain fields
         subject: subject || null,
         topic: topic || null,
         grade,
         chapter,
         storage: { driver: 'gridfs', bucket: BUCKET_NAME, file_id: fileId },
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
       };
 
       await materials.insertOne(doc);
@@ -102,13 +109,17 @@ export async function POST(req) {
           topic: doc.topic,
           grade: doc.grade,
           chapter: doc.chapter,
+          filename: doc.filename,
+          size: doc.size,
+          status: doc.status,
+          createdAt: doc.createdAt,
         },
         storage: { driver: 'gridfs', file_id: fileId },
-      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs' }));
+      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored' }));
     } catch (dbError) {
-      return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false });
+      return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }
   } catch (e) {
-    return err(500, 'Onverwachte serverfout bij upload.', 'materials/upload', { db_ok: false });
+    return err(500, 'Onverwachte serverfout bij upload.', 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:server_error' }));
   }
 }

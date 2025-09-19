@@ -3,14 +3,39 @@ import { NextResponse } from 'next/server';
 import { fetchMaterials, getMaterialsStats } from '../../../infra/db/materialsService';
 import { getDatabase } from '../../../infra/db/mongoClient';
 
-function ok(data = {}, status = 200) {
+function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...data }, { status });
+  return NextResponse.json({ ...base, ...data }, { status, headers });
 }
 
-function err(status, message, where = 'materials/list', extra = {}) {
+function err(status, message, where = 'materials/list', extra = {}, headers) {
   const base = { ok: false, error: message, where, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...extra }, { status });
+  return NextResponse.json({ ...base, ...extra }, { status, headers });
+}
+
+function toUiItem(item) {
+  // Normalize both legacy records and new GridFS-backed materials to a common UI shape
+  const id = item.id || item.material_id || item.materialId || item._id || null;
+  const filename = item.filename || item.file?.filename || 'bestand.pdf';
+  const mime = item.mime || item.file?.mime || item.file?.type || (item.type === 'pdf' ? 'application/pdf' : null);
+  const type = item.type || (mime === 'application/pdf' ? 'pdf' : 'unknown');
+  const size = item.size ?? item.file?.size ?? null;
+  const status = item.status || 'ready';
+  const createdAt = item.createdAt || item.created_at || null;
+  return {
+    id,
+    filename,
+    type,
+    size,
+    status,
+    createdAt,
+    material_id: item.material_id || id,
+    storage: item.storage || null,
+    subject: item.subject ?? null,
+    topic: item.topic ?? null,
+    grade: item.grade ?? null,
+    chapter: item.chapter ?? null,
+  };
 }
 
 export async function GET(req) {
@@ -18,7 +43,6 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const wantStats = searchParams.get('stats') === '1' || searchParams.get('stats') === 'true';
 
-    // Quick DB health check
     let db_ok = true;
     try {
       const db = await getDatabase();
@@ -30,9 +54,9 @@ export async function GET(req) {
     if (wantStats) {
       try {
         const stats = await getMaterialsStats();
-        return ok({ db_ok, stats });
+        return ok({ db_ok, stats }, 200, new Headers({ 'X-Debug': 'materials:stats' }));
       } catch (e) {
-        return err(500, 'Kon statistieken niet ophalen.', 'materials/stats', { db_ok });
+        return err(500, 'Kon statistieken niet ophalen.', 'materials/stats', { db_ok }, new Headers({ 'X-Debug': 'materials:stats_error' }));
       }
     }
 
@@ -45,13 +69,14 @@ export async function GET(req) {
 
     let items = [];
     try {
-      items = await fetchMaterials({ subject, grade, chapter, topic });
+      const raw = await fetchMaterials({ subject, grade, chapter, topic });
+      items = Array.isArray(raw) ? raw.map(toUiItem) : [];
     } catch {
-      // fetchMaterials already logs; keep items as []
+      items = [];
     }
 
-    return ok({ db_ok, items });
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list' }));
   } catch (e) {
-    return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false });
+    return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));
   }
 }
