@@ -4,6 +4,7 @@ import { srvGenerateHints } from '../../../../infra/llm/server/openaiClient';
 
 export async function POST(req) {
   try {
+    console.log('[DEBUG] generate-hints route called');
     const body = await req.json().catch(() => ({}));
 
     const res = await srvGenerateHints({
