@@ -6,9 +6,19 @@ export async function POST(req) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const answers = Array.isArray(body.answers) ? body.answers : [];
-    const questions = Array.isArray(body.questions) ? body.questions : [];
-    const objectives = Array.isArray(body.objectives) ? body.objectives : [];
+    // Support both single-item grading and batch grading
+    let answers = Array.isArray(body.answers) ? body.answers : [];
+    let questions = Array.isArray(body.questions) ? body.questions : [];
+    let objectives = Array.isArray(body.objectives) ? body.objectives : [];
+
+    if (body.question && typeof body.question === 'object') {
+      const q = body.question;
+      const studentAnswer = body.student_answer ?? body.answer ?? '';
+      answers = [String(studentAnswer)];
+      questions = [String(q.stem || '')];
+      objectives = [String(q.objective || 'general')];
+    }
+
     const isExam = Boolean(body.isExam);
 
     const res = await srvGradeQuiz({
