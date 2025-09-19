@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { fetchMaterials, getMaterialsStats } from '../../infra/db/materialsService';
-import { getDatabase } from '../../infra/db/mongoClient';
+import { fetchMaterials, getMaterialsStats } from '../../../infra/db/materialsService';
+import { getDatabase } from '../../../infra/db/mongoClient';
 
 function ok(data = {}, status = 200) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
