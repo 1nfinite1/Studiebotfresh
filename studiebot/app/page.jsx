@@ -342,12 +342,12 @@ function ChatPanel({ mode, context }) {
     else el.scrollTop = el.scrollHeight
   }, [messages])
 
-  // Fetch glossary when context changes
+  // Fetch glossary when context changes (optional)
   useEffect(() => {
-    if (context.vak && context.leerjaar && context.hoofdstuk) {
+    if (GLOSSARY_ENABLED && context.vak && context.leerjaar && context.hoofdstuk) {
       fetchGlossary(context.vak, context.leerjaar, context.hoofdstuk)
     }
-  }, [context.vak, context.leerjaar, context.hoofdstuk, fetchGlossary])
+  }, [GLOSSARY_ENABLED, context.vak, context.leerjaar, context.hoofdstuk, fetchGlossary])
 
   useEffect(() => {
     setMessages([])
