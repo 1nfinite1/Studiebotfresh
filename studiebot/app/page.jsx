@@ -95,7 +95,87 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
   )
 }
 
-function MaterialsAdmin() { /* unchanged for brevity */ }
+function MaterialsAdmin() {
+  const [files, setFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const loadFiles = async () => {
+    setLoading(true)
+    try {
+      const res = await apiFetch('/api/materials')
+      const data = await res.json()
+      if (data.ok && Array.isArray(data.materials)) {
+        setFiles(data.materials)
+      }
+    } catch (e) {
+      console.error('Failed to load materials:', e)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { loadFiles() }, [])
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await apiFetch('/api/materials/upload', { method: 'POST', body: form })
+      const data = await res.json()
+      if (data.ok) {
+        await loadFiles()
+      }
+    } catch (e) {
+      console.error('Upload failed:', e)
+    }
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  const handleDelete = async (materialId) => {
+    if (!confirm('Weet je zeker dat je dit materiaal wilt verwijderen?')) return
+    try {
+      const res = await apiFetch(`/api/materials/${materialId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.ok) {
+        await loadFiles()
+      }
+    } catch (e) {
+      console.error('Delete failed:', e)
+    }
+  }
+
+  return (
+    <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
+      <h3 className="mb-3 text-sm font-bold text-purple-700">Materiaalenbeheer</h3>
+      <div className="mb-3">
+        <input type="file" accept=".pdf,.docx" onChange={handleUpload} disabled={uploading} className="text-sm" />
+        {uploading && <span className="ml-2 text-xs text-purple-600">Uploaden...</span>}
+      </div>
+      {loading ? (
+        <p className="text-xs text-purple-600">Laden...</p>
+      ) : (
+        <div className="space-y-2">
+          {files.length === 0 ? (
+            <p className="text-xs text-purple-600">Geen materialen gevonden</p>
+          ) : (
+            files.map((file) => (
+              <div key={file.id} className="flex items-center justify-between rounded bg-white p-2 text-xs">
+                <span className="truncate font-medium">{file.filename}</span>
+                <button onClick={() => handleDelete(file.id)} className="text-red-600 hover:text-red-800">
+                  Verwijder
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function ChatPanel({ mode, context }) {
   const [messages, setMessages] = useState([])
