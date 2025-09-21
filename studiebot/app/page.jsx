@@ -391,13 +391,20 @@ function ChatPanel({ mode, context }) {
   return (
     <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
       <div ref={listRef} className="max-h-[50vh] space-y-4 overflow-auto p-2">
-        {messages.map((m, idx) => (
-          <div key={idx} className={`max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
-            <div className="max-w-[70ch] whitespace-pre-wrap">
-              <ProcessedText>{m.content}</ProcessedText>
+        {messages.map((m, idx) => {
+          const [main, ...rest] = String(m.content || '').split('\n').filter(Boolean)
+          const hint = rest.length > 0 ? rest.join('\n') : ''
+          return (
+            <div key={idx} className={`relative max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
+              <div className="absolute right-2 top-2">
+                <HintBubble hint={hint} />
+              </div>
+              <div className="max-w-[70ch] whitespace-pre-wrap">
+                <ProcessedText>{main}</ProcessedText>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         {showTyping && (
           <div className="max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed bg-white/15 text-white">
             <span className="typing-dots" aria-live="polite" aria-label={loadingLabel}>
