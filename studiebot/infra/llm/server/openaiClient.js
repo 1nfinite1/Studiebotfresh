@@ -231,8 +231,9 @@ export async function srvExamGenerate({ topicId, blueprint = {}, totalQuestions 
     };
   }
   const response = { questions: [], blueprint: { by_objective: {}, by_level: { remember: 0, understand: 0, apply: 0 } }, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
-  const system = `Je bent Studiebot. Genereer N toetsvragen in het Nederlands (kort, duidelijk).`;
-  const user = `Lesmateriaal:\n${ctx.text.slice(0, 12000)}\nAantal vragen: ${totalQuestions}.`;
+  const { buildExamSystemGenerate, buildExamUserGenerate } = await import('../prompts');
+  const system = buildExamSystemGenerate();
+  const user = buildExamUserGenerate(ctx.text || '', Math.min(Math.max(totalQuestions, 1), 10));
   try {
     const resp = await c.chat.completions.create({ model: MODELS.exam, temperature: 0.4, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
     const content = resp.choices?.[0]?.message?.content || '{}';
