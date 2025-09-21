@@ -95,6 +95,18 @@ export async function getActiveFor({ subject, grade, chapter } = {}) {
       acc += (acc ? '\n\n---\n\n' : '') + t;
     }
 
+    // Fallback: if no segments text available yet, use preview snippet (GridFS sample or stub)
+    if (!acc || acc.trim().length < 10) {
+      try {
+        const pv = await previewMaterial(material.material_id);
+        if (pv && pv.textSnippet) {
+          acc = String(pv.textSnippet).slice(0, MAX_CHARS);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return { material, segmentsText: acc, pagesCount };
   } catch (e) {
     console.error('getActiveFor failed:', e.message);
