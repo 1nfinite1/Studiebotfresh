@@ -8,16 +8,16 @@ export function buildExamSystemGenerate(): string {
 
 export function buildExamUserGenerate(segmentsText: string, total: number): string {
   const ctx = segmentsText?.slice(0, 12000) || '';
-  return `Context (alleen relevante delen gebruiken):\n${ctx}\n\nAantal vragen: ${total}.\nGenereer de toets (alleen vragen).`;
+  return `Context (alleen relevante delen gebruiken):\n${ctx}\n\nAantal vragen: ${total}.\nGenereer de toets (alleen vragen, genummerd).`;
 }
 
 export function buildExamSystemGrade(): string {
   return (
     SYSTEM_HEADER +
-    `\nOEFENTOETS – SUBMIT/NAKIJKEN\nTaak: Beoordeel de antwoorden heel kort en helder.\nRegels:\n- Geef per vraag: status correct|wrong|partial met emoji ✅❌🤔, een korte uitleg (max 2–3 zinnen) en een modelantwoord.\n- Wees warm en bemoedigend; 2–4 emoji in korte overall feedback mag, niet per item.\n\nUitvoer in JSON: is_correct, score (0..1), feedback (1–2 korte NL zinnen), weak_areas[], next_recommended_focus[], chat_prefill.`);
+    `\nOEFENTOETS – SUBMIT/NAKIJKEN\nTaak: Beoordeel het antwoord kort en helder, op basis van de context.\nRegels:\n- Geef JSON met: is_correct (bool), score (0..1), explanation (1–3 korte NL-zinnen), model_answer (compact NL antwoord).\n- Wees warm en bemoedigend; geen metatekst.\n- Gebruik alleen de context; geen speculatie buiten de stof.\n`);
 }
 
-export function buildExamUserGrade(segmentsText: string, questions: string[], answers: string[]): string {
+export function buildExamUserGrade(segmentsText: string, question: string, student: string): string {
   const ctx = segmentsText?.slice(0, 12000) || '';
-  return `Context (alleen relevante delen gebruiken):\n${ctx}\n\nVragen: ${JSON.stringify(questions.slice(0, 20))}\nAntwoorden: ${JSON.stringify(answers.slice(0, 20))}\nBeoordeel kort.`;
+  return `Context (alleen relevante delen gebruiken):\n${ctx}\n\nVraag: ${question}\nAntwoord leerling: ${student}\nGeef JSON met velden: is_correct, score, explanation, model_answer.`;
 }
