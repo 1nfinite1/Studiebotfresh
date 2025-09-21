@@ -388,11 +388,7 @@ function ChatPanel({ mode, context }) {
         {messages.map((m, idx) => (
           <div key={idx} className={`max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
             <div className="max-w-[70ch] whitespace-pre-wrap">
-              {m.role === 'assistant' ? (
-                renderMessage(m.content)
-              ) : (
-                <ProcessedText>{m.content}</ProcessedText>
-              )}
+              <ProcessedText>{m.content}</ProcessedText>
             </div>
           </div>
         ))}
