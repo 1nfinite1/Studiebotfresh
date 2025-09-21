@@ -239,7 +239,156 @@ function ChatPanel({ mode, context }) {
   )
 }
 
-// OefentoetsPanel stays as in previous commit (generate → take → report)
+function OefentoetsPanel({ context }) {
+  const [phase, setPhase] = useState('generate') // 'generate', 'taking', 'report'
+  const [questions, setQuestions] = useState([])
+  const [answers, setAnswers] = useState({})
+  const [results, setResults] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const generateExam = async () => {
+    setLoading(true)
+    try {
+      const llm = getLLMClient()
+      const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
+      const exam = await llm.generateExam({ 
+        topicId, 
+        subject: context.vak, 
+        grade: context.leerjaar, 
+        chapter: context.hoofdstuk,
+        questionCount: 5 
+      })
+      if (exam?.questions && Array.isArray(exam.questions)) {
+        setQuestions(exam.questions)
+        setPhase('taking')
+      }
+    } catch (e) {
+      console.error('Exam generation failed:', e)
+    }
+    setLoading(false)
+  }
+
+  const submitExam = async () => {
+    setLoading(true)
+    try {
+      const llm = getLLMClient()
+      const submission = questions.map((q, idx) => ({
+        question: q.question || q.stem,
+        studentAnswer: answers[idx] || ''
+      }))
+      const result = await llm.submitExam({ submission })
+      if (result) {
+        setResults(result)
+        setPhase('report')
+      }
+    } catch (e) {
+      console.error('Exam submission failed:', e)
+    }
+    setLoading(false)
+  }
+
+  const resetExam = () => {
+    setPhase('generate')
+    setQuestions([])
+    setAnswers({})
+    setResults(null)
+  }
+
+  if (phase === 'generate') {
+    return (
+      <div className="mx-auto mt-4 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <div className="text-center">
+          <h3 className="mb-4 text-xl text-white">Oefentoets starten</h3>
+          <p className="mb-6 text-white/80">We maken een oefentoets voor je klaar met 5 vragen.</p>
+          <FullButton onClick={generateExam} variant="primary" disabled={loading}>
+            {loading ? 'Toets wordt klaargezet...' : 'Start oefentoets'}
+          </FullButton>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'taking') {
+    return (
+      <div className="mx-auto mt-4 w-full max-w-4xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <div className="mb-6 text-center">
+          <h3 className="text-xl text-white">Oefentoets</h3>
+          <p className="text-white/80">Beantwoord alle vragen en klik op 'Inleveren'</p>
+        </div>
+        <div className="space-y-6">
+          {questions.map((q, idx) => (
+            <div key={idx} className="rounded-lg bg-white p-4 text-purple-800">
+              <h4 className="mb-3 font-semibold">Vraag {idx + 1}</h4>
+              <p className="mb-4">{q.question || q.stem}</p>
+              {q.choices && Array.isArray(q.choices) ? (
+                <div className="space-y-2">
+                  {q.choices.map((choice, choiceIdx) => (
+                    <label key={choiceIdx} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name={`question-${idx}`}
+                        value={choice}
+                        checked={answers[idx] === choice}
+                        onChange={(e) => setAnswers({...answers, [idx]: e.target.value})}
+                      />
+                      <span>{choice}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  value={answers[idx] || ''}
+                  onChange={(e) => setAnswers({...answers, [idx]: e.target.value})}
+                  placeholder="Typ je antwoord hier..."
+                  className="w-full rounded border p-3 text-purple-800"
+                  rows={3}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-center gap-4">
+          <FullButton onClick={resetExam} variant="secondary">Annuleren</FullButton>
+          <FullButton onClick={submitExam} disabled={loading}>
+            {loading ? 'Nakijken...' : 'Inleveren'}
+          </FullButton>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'report' && results) {
+    return (
+      <div className="mx-auto mt-4 w-full max-w-4xl rounded-2xl bg-white p-6 ring-1 ring-white/20">
+        <div className="mb-6 text-center">
+          <h3 className="text-xl text-purple-800">Toetsrapport</h3>
+          <p className="text-purple-600">Score: {results.score || 0}%</p>
+        </div>
+        <div className="space-y-4">
+          {results.feedback && Array.isArray(results.feedback) ? (
+            results.feedback.map((item, idx) => (
+              <div key={idx} className="rounded-lg border border-purple-200 p-4">
+                <h4 className="mb-2 font-semibold text-purple-800">Vraag {idx + 1}</h4>
+                <p className="mb-2 text-purple-700">{item.question}</p>
+                <p className="mb-2 text-sm"><strong>Jouw antwoord:</strong> {item.studentAnswer}</p>
+                <p className="mb-2 text-sm"><strong>Status:</strong> {item.emoji} {item.status}</p>
+                {item.explanation && <p className="text-sm text-purple-600">{item.explanation}</p>}
+                {item.modelAnswer && <p className="text-sm"><strong>Correct antwoord:</strong> {item.modelAnswer}</p>}
+              </div>
+            ))
+          ) : (
+            <p className="text-purple-600">Geen feedback beschikbaar</p>
+          )}
+        </div>
+        <div className="mt-6 text-center">
+          <FullButton onClick={resetExam}>Nieuwe toets starten</FullButton>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
 
 function Workspace({ context, mode, setMode }) {
   return (
