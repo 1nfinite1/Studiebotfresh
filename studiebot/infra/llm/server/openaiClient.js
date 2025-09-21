@@ -146,8 +146,9 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
       return { question_id: 'stub-q1', type: 'mcq', stem: '(stub) Korte vraag bij de tekst.', choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: objective || 'algemeen', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     }
     const response = { question_id: `q-${Date.now()}`, type: 'mcq', stem: '', choices: [], answer_key: { correct: [], explanation: '' }, objective: objective || 'general', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
-    const system = `Je bent Studiebot. Schrijf 1 quizvraag in het Nederlands. Geef JSON met question_id, type, stem, choices, answer_key, bloom_level, difficulty, hint|null, defined_terms[].`;
-    const user = `Context uit lesmateriaal:\n${ctx.text.slice(0, 12000)}\n\nMaak een korte vraag die past bij: ${topicId || 'algemeen'}.`;
+    const { buildQuizSystem, buildQuizUser } = await import('../prompts');
+    const system = buildQuizSystem();
+    const user = buildQuizUser(topicId || 'algemeen', ctx.text || '', objective || 'algemeen');
     try {
       const resp = await c.chat.completions.create({ model: MODELS.quiz, temperature: 0.4, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
       const content = resp.choices?.[0]?.message?.content || '{}';
