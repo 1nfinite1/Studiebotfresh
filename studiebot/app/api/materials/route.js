@@ -37,10 +37,15 @@ function toLegacy(item) {
   const status = active ? 'active' : (item.status || 'ready');
   const createdAt = item.createdAt || item.created_at || new Date().toISOString();
   const uploader = item.uploader || 'docent';
-  const segments = Math.max(1, Number(item.segments || 0)); // force ≥1
+  const segments = Math.max(1, Number(item.segments || 0));
+  const segmentsCount = segments;
+  const pagesCount = segments;
+  const filesCount = segmentsCount;
+  const segmentsList = [ { id: `seg_${material_id}`, preview: `Stub preview for ${filename}` } ];
   return {
     id, setId, filename, type, size, status, createdAt, uploader,
-    segments, segmentsCount: segments, pagesCount: segments,
+    segments, segmentsCount, pagesCount,
+    filesCount, totalPages: pagesCount, segmentsList,
     ready: status !== 'active', active,
     material_id,
     storage: item.storage || null,
@@ -76,7 +81,7 @@ export async function GET(req) {
     } catch { db_ok = false; items = []; }
 
     const sets = items; const count = items.length;
-    return ok({ db_ok, items, sets, count }, 200, new Headers({ 'X-Debug': 'materials:list' }));
+    return ok({ db_ok, items, sets, count }, 200, new Headers({ 'X-Debug': 'materials:list|legacy_full' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));
   }
