@@ -168,7 +168,7 @@ class StudiebotBackendTester:
 
     def seed_active_material(self):
         """Seed active material for LLM context testing"""
-        if not self.db:
+        if self.db is None:
             return False
             
         try:
