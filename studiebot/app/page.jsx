@@ -173,9 +173,26 @@ function MaterialsAdmin() {
       const url = `/api/materials/list?vak=${encodeURIComponent(vak)}&leerjaar=${encodeURIComponent(leerjaar)}&hoofdstuk=${encodeURIComponent(hoofdstuk)}`
       const res = await apiFetch(url)
       const data = await res.json()
-      setItems(data?.data?.items || [])
+      // Instrumentation
+      console.log('[materials:list] raw response', data)
+      const list = data?.items || data?.sets || data?.data?.items || []
+      console.log('[materials:list] using items length:', list.length)
+      if (list[0]) {
+        console.log('[materials:list] first item sample', {
+          id: list[0].id,
+          segments: list[0].segments,
+          segmentsCount: list[0].segmentsCount,
+          pagesCount: list[0].pagesCount,
+          filesCount: list[0].filesCount,
+          totalPages: list[0].totalPages,
+          ready: list[0].ready,
+          active: list[0].active,
+        })
+      }
+      setItems(list)
       setSetInfo(data?.data?.set || null)
-    } catch {
+    } catch (e) {
+      console.log('[materials:list] error', e)
       setMsg('Kon lijst niet ophalen')
     } finally { setLoading(false) }
   }
@@ -190,24 +207,43 @@ function MaterialsAdmin() {
     try {
       const fd = new FormData()
       fd.append('file', file)
+      // Send both legacy and new field names just in case
       fd.append('vak', vak)
       fd.append('leerjaar', leerjaar)
       fd.append('hoofdstuk', hoofdstuk)
+      fd.append('subject', vak)
+      fd.append('grade', leerjaar)
+      fd.append('chapter', hoofdstuk)
       fd.append('uploader', 'docent')
       const res = await apiFetch('/api/materials/upload', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Upload mislukt')
-      const segCount = data?.data?.item?.segmentCount ?? data?.data?.segmentCount ?? 0
+      console.log('[materials:upload] raw response', data)
+      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Upload mislukt')
+      const m = data?.material || data?.data?.item || {}
+      const segCount = m.segmentsCount ?? m.pagesCount ?? m.segments ?? data?.data?.segmentCount ?? 0
+      console.log('[materials:upload] computed segCount from', {
+        segments: m.segments,
+        segmentsCount: m.segmentsCount,
+        pagesCount: m.pagesCount,
+        fallback: data?.data?.segmentCount,
+      })
       setMsg(`Gereed: ${segCount} segmenten`)
       await refresh()
-    } catch (e) { setMsg(e.message) } finally { setUploading(false); if (e?.target) e.target.value = '' }
+    } catch (e) {
+      setMsg(e.message)
+    } finally { setUploading(false); try { e.target.value = '' } catch {} }
   }
 
   const onActivate = async () => {
     try {
-      const res = await apiFetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vak, leerjaar, hoofdstuk }) })
+      // Pick first item as target if none selected (instrumentation-friendly)
+      const target = items[0]
+      console.log('[materials:activate] using target', target?.id)
+      const body = target?.id ? { material_id: target.id } : { vak, leerjaar, hoofdstuk }
+      const res = await apiFetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Activeren mislukt')
+      console.log('[materials:activate] raw response', data)
+      if (!res.ok || data?.ok === false) throw new Error(data?.error || data?.message || 'Activeren mislukt')
       setMsg('Actief gemaakt')
       await refresh()
     } catch (e) { setMsg(e.message) }
@@ -278,7 +314,7 @@ function MaterialsAdmin() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{it.filename}</p>
                 <p className="text-xs text-purple-600">Status: {it.status} • Type: {it.type} • {new Date(it.createdAt).toLocaleString()}</p>
-                <p className="text-xs text-purple-600">Vak: {it.vak || '-'} • Leerjaar: {it.leerjaar || '-'} • Hoofdstuk: {it.hoofdstuk || '-'}</p>
+                <p className="text-xs text-purple-600">Vak: {it.subject || it.vak || '-'} • Leerjaar: {it.grade || it.leerjaar || '-'} • Hoofdstuk: {it.chapter || it.hoofdstuk || '-'}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => onPreview(it.id)} className="rounded-md bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-200">Bekijken</button>
@@ -446,7 +482,6 @@ function OefentoetsPanel({ context, onSwitchToOverhoren }) {
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(null)
   const [feedback, setFeedback] = useState([])
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     // Generate mock questions for the test
