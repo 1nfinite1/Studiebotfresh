@@ -8,6 +8,7 @@ const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 const BUCKET_NAME = process.env.GRIDFS_BUCKET || 'uploads';
 const PDF = 'application/pdf';
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const LEGACY = process.env.LEGACY_MATERIALS_API !== 'false'; // default true
 
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
@@ -25,6 +26,29 @@ function detectType(mime, filename) {
   if (filename && filename.toLowerCase().endsWith('.docx')) return 'docx';
   if (filename && filename.toLowerCase().endsWith('.pdf')) return 'pdf';
   return 'unknown';
+}
+
+function toLegacyMaterial(doc) {
+  // Ensure legacy-required fields are present
+  const segments = Math.max(1, Number(doc.segments || 0));
+  const status = doc.active ? 'active' : (doc.status || 'ready');
+  return {
+    material_id: doc.material_id,
+    subject: doc.subject ?? null,
+    topic: doc.topic ?? null,
+    grade: doc.grade ?? null,
+    chapter: doc.chapter ?? null,
+    filename: doc.filename,
+    size: doc.size,
+    status,
+    createdAt: doc.createdAt,
+    setId: doc.setId,
+    uploader: doc.uploader || 'docent',
+    segments,
+    segmentsCount: segments,
+    pagesCount: segments,
+    active: !!doc.active,
+  };
 }
 
 export async function POST(req) {
@@ -102,7 +126,7 @@ export async function POST(req) {
         status: 'ready',
         createdAt: nowIso,
         uploader: 'docent',
-        segments: 1, // set directly to 1 so UI never sees 0
+        segments: 1, // legacy compat: never 0
         subject: subject || null,
         topic: topic || null,
         grade,
@@ -113,28 +137,23 @@ export async function POST(req) {
       };
       await materials.insertOne(doc);
 
-      return ok({
-        db_ok: true,
-        file: { filename, mime, size: buffer.length },
-        material: {
-          material_id,
-          subject: doc.subject,
-          topic: doc.topic,
-          grade: doc.grade,
-          chapter: doc.chapter,
-          filename: doc.filename,
-          size: doc.size,
-          status: doc.status,
-          createdAt: doc.createdAt,
-          setId: doc.setId,
-          uploader: doc.uploader,
-          segments: doc.segments,
-          segmentsCount: doc.segments,
-          pagesCount: doc.segments,
-          active: false,
-        },
-        storage: { driver: 'gridfs', file_id: fileId },
-      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_sync_set1' }));
+      const legacyMat = toLegacyMaterial(doc);
+
+      const body = LEGACY
+        ? {
+            db_ok: true,
+            file: { filename, mime, size: buffer.length },
+            material: legacyMat,
+            storage: { driver: 'gridfs', file_id: fileId },
+          }
+        : {
+            db_ok: true,
+            file: { filename, mime, size: buffer.length },
+            material: doc,
+            storage: { driver: 'gridfs', file_id: fileId },
+          };
+
+      return ok(body, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_and_ingested_v1' }));
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }

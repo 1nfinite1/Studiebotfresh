@@ -30,11 +30,7 @@ async function handleActivate(req) {
     const materials = db.collection('materials');
 
     const doc = await materials.findOne({
-      $or: [
-        { material_id },
-        { id: material_id },
-        { setId: material_id },
-      ],
+      $or: [ { material_id }, { id: material_id }, { setId: material_id } ],
     });
     if (!doc) {
       return err(404, 'Materiaal niet gevonden.', 'materials/activate', { material_id, db_ok: true }, new Headers({ 'X-Debug': 'materials:activate|not_found' }));
@@ -43,37 +39,18 @@ async function handleActivate(req) {
     const segCount = Number(doc.segments || 0);
     if (!Number.isFinite(segCount) || segCount < 1) {
       return NextResponse.json(
-        {
-          ok: false,
-          db_ok: true,
-          reason: 'no_segments',
-          message: 'Geen segmenten gevonden voor dit materiaal.',
-          material_id,
-        },
+        { ok: false, db_ok: true, reason: 'no_segments', message: 'Geen segmenten gevonden voor dit materiaal.', material_id },
         { status: 200, headers: new Headers({ 'X-Debug': 'materials:activate|no_segments' }) }
       );
     }
 
-    await materials.updateOne(
-      { _id: doc._id },
-      { $set: { status: 'active', active: true, updated_at: new Date().toISOString() } }
-    );
+    await materials.updateOne({ _id: doc._id }, { $set: { status: 'active', active: true, updated_at: new Date().toISOString() } });
 
-    return ok(
-      { db_ok: true, activated: true, material_id },
-      200,
-      new Headers({ 'X-Debug': 'materials:activate|ok' })
-    );
+    return ok({ db_ok: true, activated: true, material_id }, 200, new Headers({ 'X-Debug': 'materials:activate|ok' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij activeren.', 'materials/activate', { db_ok: false }, new Headers({ 'X-Debug': 'materials:activate|server_error' }));
   }
 }
 
-export async function PUT(req) {
-  return handleActivate(req);
-}
-
-export async function POST(req) {
-  // Alias for safety
-  return handleActivate(req);
-}
+export async function PUT(req) { return handleActivate(req); }
+export async function POST(req) { return handleActivate(req); }
