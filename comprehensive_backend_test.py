@@ -50,7 +50,7 @@ class StudiebotBackendTester:
             self.mongo_client = MongoClient(MONGO_URL)
             self.db = self.mongo_client.studiebot
             # Test connection
-            self.db.admin.command('ping')
+            self.mongo_client.admin.command('ping')
             print("✅ MongoDB connection established")
             return True
         except Exception as e:
