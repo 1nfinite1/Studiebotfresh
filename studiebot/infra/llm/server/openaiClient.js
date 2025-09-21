@@ -225,7 +225,7 @@ export async function srvExamGenerate({ topicId, blueprint = {}, totalQuestions 
   }
   if (!c) {
     return {
-      questions: Array.from({ length: totalQuestions }, (_, i) => ({ question_id: `stub-q${i + 1}`, type: 'mcq', stem: `(stub) Vraag ${i + 1}`, choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: `objective-${i + 1}`, bloom_level: i &lt; 2 ? 'remember' : i &lt; 4 ? 'understand' : 'apply', difficulty: 'medium', source_ids: [], hint: null, defined_terms: [] })), blueprint: { by_objective: { OB1: 2, OB2: 2, OB3: 1 }, by_level: { remember: 2, understand: 2, apply: 1 } }, notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length,
+      questions: Array.from({ length: totalQuestions }, (_, i) => ({ question_id: `stub-q${i + 1}`, type: 'mcq', stem: `(stub) Vraag ${i + 1}`, choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: `objective-${i + 1}`, bloom_level: i < 2 ? 'remember' : i < 4 ? 'understand' : 'apply', difficulty: 'medium', source_ids: [], hint: null, defined_terms: [] })), blueprint: { by_objective: { OB1: 2, OB2: 2, OB3: 1 }, by_level: { remember: 2, understand: 2, apply: 1 } }, notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length,
     };
   }
   const response = { questions: [], blueprint: { by_objective: {}, by_level: { remember: 0, understand: 0, apply: 0 } }, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
