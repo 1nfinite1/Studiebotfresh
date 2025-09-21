@@ -415,7 +415,85 @@ function Workspace({ context, mode, setMode }) {
   )
 }
 
-function AppInner() { /* unchanged scaffolding */ }
+function AppInner() {
+  const [step, setStep] = useState(0)
+  const [context, setContext] = useState({ vak: '', leerjaar: '', hoofdstuk: '' })
+  const [mode, setMode] = useState('')
+  const [guidance, setGuidance] = useLocalStorage('guidance', defaultGuidance)
+  const [isTeacher, setIsTeacher] = useLocalStorage('isTeacher', false)
+
+  const bgGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+
+  return (
+    <div className="min-h-screen text-white" style={{ background: bgGradient }}>
+      <LLMNotice />
+      <HeaderBar step={step} setStep={setStep} />
+      <HeaderConfig guidance={guidance} setGuidance={setGuidance} isTeacher={isTeacher} setIsTeacher={setIsTeacher} />
+      <div className="container mx-auto px-4 pb-8">
+        <FadeSlide show={step === 0}>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <Card>
+              <h2 className="mb-6 text-center text-2xl">Voor welk vak ga je studeren?</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {SUBJECTS.map((subject) => (
+                  <FullButton key={subject} size="compact" onClick={() => { setContext({ ...context, vak: subject }); setStep(1) }}>
+                    {subject}
+                  </FullButton>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </FadeSlide>
+        <FadeSlide show={step === 1}>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <Card>
+              <h2 className="mb-6 text-center text-2xl">Welk leerjaar?</h2>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                {YEARS.map((year) => (
+                  <FullButton key={year} size="compact" onClick={() => { setContext({ ...context, leerjaar: year }); setStep(2) }}>
+                    Jaar {year}
+                  </FullButton>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </FadeSlide>
+        <FadeSlide show={step === 2}>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <Card>
+              <h2 className="mb-6 text-center text-2xl">Welk hoofdstuk?</h2>
+              <div className="space-y-3">
+                <input 
+                  type="text" 
+                  placeholder="Bijv. Hoofdstuk 3: De Gouden Eeuw"
+                  className="w-full rounded-xl border border-white/20 bg-white/90 p-4 text-purple-800 outline-none placeholder:text-purple-300 focus:ring-2 focus:ring-purple-300"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      setContext({ ...context, hoofdstuk: e.target.value.trim() })
+                      setStep(3)
+                    }
+                  }}
+                />
+                <FullButton onClick={(e) => {
+                  const input = e.target.parentElement.querySelector('input')
+                  if (input?.value.trim()) {
+                    setContext({ ...context, hoofdstuk: input.value.trim() })
+                    setStep(3)
+                  }
+                }}>
+                  Verder
+                </FullButton>
+              </div>
+            </Card>
+          </div>
+        </FadeSlide>
+        <FadeSlide show={step === 3}>
+          <Workspace context={context} mode={mode} setMode={setMode} />
+        </FadeSlide>
+      </div>
+    </div>
+  )
+}
 
 function App() { return (<EmojiModeProvider><GlossaryProvider><AppInner /></GlossaryProvider></EmojiModeProvider>) }
 export default App
