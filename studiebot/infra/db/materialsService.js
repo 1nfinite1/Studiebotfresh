@@ -65,9 +65,20 @@ export async function getActiveFor({ subject, grade, chapter } = {}) {
     const segmentsCol = db.collection('material_segments');
 
     const selector = { active: true };
-    if (subject) selector.subject = subject;
-    if (grade !== undefined && grade !== null && grade !== '') selector.grade = typeof grade === 'string' ? Number(grade) || grade : grade;
-    if (chapter !== undefined && chapter !== null && chapter !== '') selector.chapter = typeof chapter === 'string' ? Number(chapter) || chapter : chapter;
+    const and = [];
+    if (subject) and.push({ subject });
+    // Normalize grade/chapter and match both number and string forms to avoid contract mismatches
+    if (grade !== undefined && grade !== null && grade !== '') {
+      const gNum = typeof grade === 'number' ? grade : Number(grade);
+      const gStr = typeof grade === 'string' ? grade : String(grade);
+      and.push({ $or: [ { grade: gNum }, { grade: gStr } ] });
+    }
+    if (chapter !== undefined && chapter !== null && chapter !== '') {
+      const cNum = typeof chapter === 'number' ? chapter : Number(chapter);
+      const cStr = typeof chapter === 'string' ? chapter : String(chapter);
+      and.push({ $or: [ { chapter: cNum }, { chapter: cStr } ] });
+    }
+    if (and.length) selector.$and = and;
 
     const material = await materials.findOne(selector);
     if (!material) return { material: null, segmentsText: '', pagesCount: 0 };
