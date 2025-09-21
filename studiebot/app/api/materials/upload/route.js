@@ -12,6 +12,11 @@ const PDF = 'application/pdf';
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const LEGACY = process.env.LEGACY_MATERIALS_API !== 'false';
 
+// OCR feature flags
+const OCR_ENABLED = process.env.OCR_ENABLED === 'true';
+const OCR_PROVIDER = process.env.OCR_PROVIDER || 'ocrspace';
+const OCR_SPACE_API_KEY = process.env.OCR_SPACE_API_KEY || '';
+
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
   return NextResponse.json({ ...base, ...data }, { status, headers });
@@ -72,6 +77,29 @@ async function extractTextFromBuffer(mime, buffer) {
     // ignore
   }
   return '';
+}
+
+async function ocrWithOCRSpace(buffer, mime, filename) {
+  if (!OCR_SPACE_API_KEY) return { text: '', used: false };
+  try {
+    const fd = new FormData();
+    const blob = new Blob([buffer], { type: mime || PDF });
+    fd.append('file', blob, filename || 'upload.pdf');
+    fd.append('language', 'dut'); // Dutch OCR
+    fd.append('isOverlayRequired', 'false');
+    fd.append('scale', 'true');
+    fd.append('OCREngine', '2');
+    const r = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      headers: { 'apikey': OCR_SPACE_API_KEY },
+      body: fd,
+    });
+    const j = await r.json().catch(() => ({}));
+    const parsed = Array.isArray(j?.ParsedResults) && j.ParsedResults[0]?.ParsedText ? j.ParsedResults[0].ParsedText : '';
+    return { text: String(parsed || ''), used: Boolean(parsed) };
+  } catch (_) {
+    return { text: '', used: false };
+  }
 }
 
 function sanitizeText(text) {
@@ -180,6 +208,11 @@ export async function POST(req) {
 
       // Extract and store segments synchronously
       let extracted = await extractTextFromBuffer(mime, buffer);
+      let ocrUsed = false;
+      if ((!extracted || extracted.trim().length < 10) && OCR_ENABLED && OCR_PROVIDER === 'ocrspace' && mime === PDF) {
+        const ocr = await ocrWithOCRSpace(buffer, mime, filename);
+        if (ocr.used && ocr.text) { extracted = ocr.text; ocrUsed = true; }
+      }
       extracted = sanitizeText(extracted);
       let segCount = 0;
       if (extracted && extracted.length > 0) {
@@ -216,8 +249,10 @@ export async function POST(req) {
             storage: { driver: 'gridfs', file_id: fileId },
           };
 
-      const debug = segCount > 0 ? 'upload:stored_with_segments' : 'upload:stored_no_segments';
-      return ok(body, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': debug }));
+      const debug = segCount > 0 ? (ocrUsed ? 'upload:stored_with_segments|ocr' : 'upload:stored_with_segments') : 'upload:stored_no_segments';
+      const headers = new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': debug });
+      if (ocrUsed) headers.set('X-OCR', 'ocrspace');
+      return ok(body, 200, headers);
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }
