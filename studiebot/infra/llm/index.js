@@ -11,8 +11,8 @@ export function getLLMClient() {
   if (!enabled) return noopLLM;
 
   return {
-    async generateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect }) {
-      const res = await webGenerateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect });
+    async generateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect, subject, grade, chapter }) {
+      const res = await webGenerateHints({ topicId, text, currentBloom, currentDifficulty, wasCorrect, subject, grade, chapter });
       return {
         hints: Array.isArray(res.hints) ? res.hints : [],
         tutor_message: res.tutor_message,
