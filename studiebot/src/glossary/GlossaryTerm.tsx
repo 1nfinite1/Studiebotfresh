@@ -40,12 +40,11 @@ export function GlossaryTerm({ children, term, definition, className = '' }: Glo
         <button
           ref={triggerRef}
           className={`
-            inline font-bold underline decoration-2 underline-offset-2 
+            inline font-bold 
             cursor-pointer transition-colors duration-200
             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-sm
-            hover:bg-purple-100 dark:hover:bg-purple-900/30
-            text-purple-700 dark:text-purple-300
-            decoration-purple-400 dark:decoration-purple-500
+            hover:bg-purple-100/30 dark:hover:bg-purple-900/30
+            text-purple-700 dark:text-purple-200
             ${className}
           `}
           aria-describedby={isOpen ? `tooltip-${term.replace(/\s+/g, '-')}` : undefined}
