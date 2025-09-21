@@ -444,6 +444,7 @@ function OefentoetsPanel({ context, onSwitchToOverhoren }) {
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(null)
   const [feedback, setFeedback] = useState([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     // Generate mock questions for the test
