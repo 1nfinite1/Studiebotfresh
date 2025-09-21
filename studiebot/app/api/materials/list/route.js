@@ -20,6 +20,11 @@ function err(status, message, where = 'materials/list_alias', extra = {}, header
   return NextResponse.json({ ...base, ...extra }, { status, headers: h });
 }
 function typeFromMime(m) { return m === PDF ? 'pdf' : m === DOCX ? 'docx' : 'unknown'; }
+function legacyField(value, fallback = 'Onbekend') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
+  return value;
+}
 function toLegacy(item) {
   const material_id = item.material_id || item.id || item.materialId || item._id || null;
   const id = material_id;
@@ -39,10 +44,10 @@ function toLegacy(item) {
     ready: status !== 'active', active,
     material_id,
     storage: item.storage || null,
-    subject: item.subject ?? null,
-    topic: item.topic ?? null,
-    grade: item.grade ?? null,
-    chapter: item.chapter ?? null,
+    subject: legacyField(item.subject),
+    topic: legacyField(item.topic),
+    grade: typeof item.grade === 'number' ? item.grade : '',
+    chapter: typeof item.chapter === 'number' ? item.chapter : '',
   };
 }
 function parseNum(v){ if(v==null) return undefined; const n=Number(v); return Number.isFinite(n)?n:undefined; }

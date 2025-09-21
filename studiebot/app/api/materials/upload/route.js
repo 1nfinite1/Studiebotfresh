@@ -28,16 +28,22 @@ function detectType(mime, filename) {
   return 'unknown';
 }
 
+function legacyField(value, fallback = 'Onbekend') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
+  return value;
+}
+
 function toLegacyMaterial(doc) {
   // Ensure legacy-required fields are present
   const segments = Math.max(1, Number(doc.segments || 0));
   const status = doc.active ? 'active' : (doc.status || 'ready');
   return {
     material_id: doc.material_id,
-    subject: doc.subject ?? null,
-    topic: doc.topic ?? null,
-    grade: doc.grade ?? null,
-    chapter: doc.chapter ?? null,
+    subject: legacyField(doc.subject),
+    topic: legacyField(doc.topic),
+    grade: typeof doc.grade === 'number' ? doc.grade : '',
+    chapter: typeof doc.chapter === 'number' ? doc.chapter : '',
     filename: doc.filename,
     size: doc.size,
     status,
@@ -74,8 +80,8 @@ export async function POST(req) {
     const topic = formData.get('topic') || '';
     const gradeRaw = formData.get('grade');
     const chapterRaw = formData.get('chapter');
-    const grade = gradeRaw !== null && gradeRaw !== undefined ? Number(gradeRaw) : null;
-    const chapter = chapterRaw !== null && chapterRaw !== undefined ? Number(chapterRaw) : null;
+    const grade = gradeRaw !== null && gradeRaw !== undefined && String(gradeRaw).trim() !== '' ? Number(gradeRaw) : null;
+    const chapter = chapterRaw !== null && chapterRaw !== undefined && String(chapterRaw).trim() !== '' ? Number(chapterRaw) : null;
 
     const mime = file.type || 'application/octet-stream';
     const filename = file.name || `upload-${Date.now()}`;
