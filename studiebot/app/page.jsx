@@ -9,6 +9,10 @@ import { ProcessedText } from '../src/lib/textProcessor'
 import { HintBubble } from '../src/hints/HintBubble'
 import { shouldShowHint } from '../src/lib/messageUtils'
 
+// Minimal UI debug flag
+const UI_DEBUG = process.env.NEXT_PUBLIC_UI_DEBUG === 'true'
+const dlog = (...args) => { if (UI_DEBUG) console.log(...args) }
+
 const SUBJECTS = [ 'Nederlands', 'Engels', 'Geschiedenis', 'Aardrijkskunde', 'Wiskunde', 'Natuurkunde', 'Scheikunde', 'Biologie', 'Economie', 'Maatschappijleer' ]
 const YEARS = ['1', '2', '3', '4', '5', '6']
 
@@ -150,8 +154,8 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
               <button onClick={() => setOpen(false)} className="rounded-md bg-purple-600 px-3 py-1 text-sm font-semibold text-white hover:bg-purple-700">Sluiten</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -173,11 +177,11 @@ function MaterialsAdmin() {
       const url = `/api/materials/list?vak=${encodeURIComponent(vak)}&leerjaar=${encodeURIComponent(leerjaar)}&hoofdstuk=${encodeURIComponent(hoofdstuk)}`
       const res = await apiFetch(url)
       const data = await res.json()
-      console.log('[materials:list] raw response', data)
+      dlog('[materials:list] raw response', data)
       const list = data?.items || data?.sets || data?.data?.items || []
-      console.log('[materials:list] using items length:', list.length)
+      dlog('[materials:list] using items length:', list.length)
       if (list[0]) {
-        console.log('[materials:list] first item sample', {
+        dlog('[materials:list] first item sample', {
           id: list[0].id,
           segments: list[0].segments,
           segmentsCount: list[0].segmentsCount,
@@ -191,7 +195,7 @@ function MaterialsAdmin() {
       setItems(list)
       setSetInfo(data?.data?.set || null)
     } catch (e) {
-      console.log('[materials:list] error', e)
+      dlog('[materials:list] error', e)
       setMsg('Kon lijst niet ophalen')
     } finally { setLoading(false) }
   }
@@ -215,11 +219,11 @@ function MaterialsAdmin() {
       fd.append('uploader', 'docent')
       const res = await apiFetch('/api/materials/upload', { method: 'POST', body: fd })
       const data = await res.json()
-      console.log('[materials:upload] raw response', data)
+      dlog('[materials:upload] raw response', data)
       if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Upload mislukt')
       const m = data?.material || data?.data?.item || {}
       const segCount = m.segmentsCount ?? m.pagesCount ?? m.segments ?? data?.data?.segmentCount ?? 0
-      console.log('[materials:upload] computed segCount from', { segments: m.segments, segmentsCount: m.segmentsCount, pagesCount: m.pagesCount, fallback: data?.data?.segmentCount })
+      dlog('[materials:upload] computed segCount from', { segments: m.segments, segmentsCount: m.segmentsCount, pagesCount: m.pagesCount, fallback: data?.data?.segmentCount })
       setMsg(`Gereed: ${segCount} segmenten`)
       await refresh()
     } catch (e) { setMsg(e.message) } finally { setUploading(false); try { e.target.value = '' } catch {} }
@@ -228,11 +232,11 @@ function MaterialsAdmin() {
   const onActivate = async () => {
     try {
       const target = items[0]
-      console.log('[materials:activate] using target', target?.id)
+      dlog('[materials:activate] using target', target?.id)
       const body = target?.id ? { material_id: target.id } : { vak, leerjaar, hoofdstuk }
       const res = await apiFetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
-      console.log('[materials:activate] raw response', data)
+      dlog('[materials:activate] raw response', data)
       if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Activeren mislukt')
       setMsg('Actief gemaakt')
       await refresh()
@@ -242,9 +246,10 @@ function MaterialsAdmin() {
   const onDelete = async (id) => {
     if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) return
     try {
+      // Use alias endpoint that supports DELETE with query id
       const res = await apiFetch(`/api/materials/item?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       const data = await res.json()
-      console.log('[materials:delete] raw response', data)
+      dlog('[materials:delete] raw response', data)
       if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Verwijderen mislukt')
       await refresh()
     } catch (e) { setMsg(e.message) }
@@ -254,7 +259,7 @@ function MaterialsAdmin() {
     try {
       const res = await apiFetch(`/api/materials/preview?material_id=${encodeURIComponent(id)}`)
       const data = await res.json()
-      console.log('[materials:preview] raw response', data)
+      dlog('[materials:preview] raw response', data)
       if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Preview mislukt')
       const text = Array.isArray(data?.data?.segments) ? data.data.segments.join('\n\n') : data?.data?.preview || data?.preview?.textSnippet || ''
       alert((text || 'Geen preview beschikbaar').slice(0, 1200))

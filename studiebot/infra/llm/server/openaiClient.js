@@ -94,7 +94,7 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
   // Fetch context
   const ctx = await getContext({ subject, grade, chapter, topicId });
   if (!ctx.ok) {
-    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' } };
+    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' }, context_len: 0 };
   }
   try {
     if (!c) {
@@ -103,11 +103,11 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
         tutor_message: '(stub) Laten we de hoofdpunten kort doornemen.',
         follow_up_question: '(stub) Wat vind je het lastigste stukje?',
         defined_terms: [], next_bloom: currentBloom, next_difficulty: currentDifficulty,
-        header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true,
+        header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length,
       };
     }
     const guardrailCheck = await runGuardrailChecks(c, text);
-    const response = { hints: [], tutor_message: '', follow_up_question: '', defined_terms: [], next_bloom: currentBloom, next_difficulty: currentDifficulty, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+    const response = { hints: [], tutor_message: '', follow_up_question: '', defined_terms: [], next_bloom: currentBloom, next_difficulty: currentDifficulty, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     if (!guardrailCheck.passed) {
       response.policy = sanitizeGuardrail(response, ['hints', 'tutor_message', 'follow_up_question'], guardrailCheck.reason);
       return response;
@@ -130,7 +130,7 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
     }
     return response;
   } catch (outerError) {
-    return { hints: ['Er ging iets mis.'], tutor_message: 'Fout opgetreden.', follow_up_question: 'Kun je je vraag opnieuw stellen?', defined_terms: [], next_bloom: 'remember', next_difficulty: 'easy', notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false };
+    return { hints: ['Er ging iets mis.'], tutor_message: 'Fout opgetreden.', follow_up_question: 'Kun je je vraag opnieuw stellen?', defined_terms: [], next_bloom: 'remember', next_difficulty: 'easy', notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false, context_len: 0 };
   }
 }
 
@@ -138,13 +138,13 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
   const c = getClient();
   const ctx = await getContext({ subject, grade, chapter, topicId });
   if (!ctx.ok) {
-    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' } };
+    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' }, context_len: 0 };
   }
   try {
     if (!c) {
-      return { question_id: 'stub-q1', type: 'mcq', stem: '(stub) Korte vraag bij de tekst.', choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: objective || 'algemeen', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+      return { question_id: 'stub-q1', type: 'mcq', stem: '(stub) Korte vraag bij de tekst.', choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: objective || 'algemeen', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     }
-    const response = { question_id: `q-${Date.now()}`, type: 'mcq', stem: '', choices: [], answer_key: { correct: [], explanation: '' }, objective: objective || 'general', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+    const response = { question_id: `q-${Date.now()}`, type: 'mcq', stem: '', choices: [], answer_key: { correct: [], explanation: '' }, objective: objective || 'general', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     const system = `Je bent Studiebot. Schrijf 1 quizvraag in het Nederlands. Geef JSON met question_id, type, stem, choices, answer_key, bloom_level, difficulty, hint|null, defined_terms[].`;
     const user = `Context uit lesmateriaal:\n${ctx.text.slice(0, 12000)}\n\nMaak een korte vraag die past bij: ${topicId || 'algemeen'}.`;
     try {
@@ -166,7 +166,7 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
     }
     return response;
   } catch {
-    return { question_id: `error-${Date.now()}`, type: 'short_answer', stem: 'Er ging iets mis.', choices: [], answer_key: { correct: [], explanation: 'Probeer opnieuw.' }, objective: objective || 'general', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false };
+    return { question_id: `error-${Date.now()}`, type: 'short_answer', stem: 'Er ging iets mis.', choices: [], answer_key: { correct: [], explanation: 'Probeer opnieuw.' }, objective: objective || 'general', bloom_level: currentBloom, difficulty: currentDifficulty, source_ids: [], hint: null, defined_terms: [], notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false, context_len: 0 };
   }
 }
 
@@ -174,14 +174,14 @@ export async function srvGradeQuiz({ answers, questions = [], objectives = [], i
   const c = getClient();
   const ctx = await getContext({ subject, grade, chapter, topicId });
   if (!ctx.ok) {
-    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' } };
+    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' }, context_len: 0 };
   }
   try {
     if (!c) {
-      return { is_correct: false, score: 0.6, feedback: '(stub) Voorbeeldbeoordeling; LLM niet geconfigureerd.', tags: [], next_recommended_focus: ['Herhaal de hoofdpunten'], weak_areas: [{ objective: 'algemeen', terms: ['kernbegrippen'] }], chat_prefill: 'Ik wil oefenen met de kernbegrippen.', notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+      return { is_correct: false, score: 0.6, feedback: '(stub) Voorbeeldbeoordeling; LLM niet geconfigureerd.', tags: [], next_recommended_focus: ['Herhaal de hoofdpunten'], weak_areas: [{ objective: 'algemeen', terms: ['kernbegrippen'] }], chat_prefill: 'Ik wil oefenen met de kernbegrippen.', notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     }
     const guardrailCheck = await runGuardrailChecks(c, Array.isArray(answers) ? answers.join(' ') : '');
-    const response = { is_correct: false, score: 0.0, feedback: '', tags: [], next_recommended_focus: [], weak_areas: [], chat_prefill: '', header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+    const response = { is_correct: false, score: 0.0, feedback: '', tags: [], next_recommended_focus: [], weak_areas: [], chat_prefill: '', header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
     if (!guardrailCheck.passed) {
       response.feedback = GUARDRAIL_MESSAGE;
       response.policy = sanitizeGuardrail(response, ['feedback'], guardrailCheck.reason);
@@ -213,7 +213,7 @@ export async function srvGradeQuiz({ answers, questions = [], objectives = [], i
     }
     return response;
   } catch {
-    return { is_correct: false, score: 0.0, feedback: 'Er ging iets mis.', tags: [], next_recommended_focus: [], weak_areas: [], chat_prefill: '', notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false };
+    return { is_correct: false, score: 0.0, feedback: 'Er ging iets mis.', tags: [], next_recommended_focus: [], weak_areas: [], chat_prefill: '', notice: 'server_error', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: false, context_len: 0 };
   }
 }
 
@@ -221,14 +221,14 @@ export async function srvExamGenerate({ topicId, blueprint = {}, totalQuestions 
   const c = getClient();
   const ctx = await getContext({ subject, grade, chapter, topicId });
   if (!ctx.ok) {
-    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' } };
+    return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' }, context_len: 0 };
   }
   if (!c) {
     return {
-      questions: Array.from({ length: totalQuestions }, (_, i) => ({ question_id: `stub-q${i + 1}`, type: 'mcq', stem: `(stub) Vraag ${i + 1}`, choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: `objective-${i + 1}`, bloom_level: i < 2 ? 'remember' : i < 4 ? 'understand' : 'apply', difficulty: 'medium', source_ids: [], hint: null, defined_terms: [] })), blueprint: { by_objective: { OB1: 2, OB2: 2, OB3: 1 }, by_level: { remember: 2, understand: 2, apply: 1 } }, notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true,
+      questions: Array.from({ length: totalQuestions }, (_, i) => ({ question_id: `stub-q${i + 1}`, type: 'mcq', stem: `(stub) Vraag ${i + 1}`, choices: ['A', 'B', 'C', 'D'], answer_key: { correct: [0], explanation: '(stub) Uitleg' }, objective: `objective-${i + 1}`, bloom_level: i &lt; 2 ? 'remember' : i &lt; 4 ? 'understand' : 'apply', difficulty: 'medium', source_ids: [], hint: null, defined_terms: [] })), blueprint: { by_objective: { OB1: 2, OB2: 2, OB3: 1 }, by_level: { remember: 2, understand: 2, apply: 1 } }, notice: 'LLM not configured', header: 'disabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length,
     };
   }
-  const response = { questions: [], blueprint: { by_objective: {}, by_level: { remember: 0, understand: 0, apply: 0 } }, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true };
+  const response = { questions: [], blueprint: { by_objective: {}, by_level: { remember: 0, understand: 0, apply: 0 } }, header: 'enabled', policy: { guardrail_triggered: false, reason: 'none' }, db_ok: true, context_len: (ctx.text || '').length };
   const system = `Je bent Studiebot. Genereer N toetsvragen in het Nederlands (kort, duidelijk).`;
   const user = `Lesmateriaal:\n${ctx.text.slice(0, 12000)}\nAantal vragen: ${totalQuestions}.`;
   try {
