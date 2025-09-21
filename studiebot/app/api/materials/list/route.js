@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { fetchMaterials } from '../../../../infra/db/materialsService';
 import { getDatabase } from '../../../../infra/db/mongoClient';
 
 function ok(data = {}, status = 200, headers) {
@@ -69,23 +68,36 @@ export async function GET(req) {
 
     // DB health
     let db_ok = true;
+    let items = [];
     try {
       const db = await getDatabase();
       await db.command({ ping: 1 });
-    } catch {
-      db_ok = false;
-    }
+      const materials = db.collection('materials');
 
-    // Fetch and normalize
-    let items = [];
-    try {
-      const raw = await fetchMaterials({ subject, grade, chapter, topic });
+      // Build inclusive selector: match value OR null/absent so new uploads without metadata still show up
+      const selector = {};
+      if (subject) {
+        selector.$and = (selector.$and || []).concat([{ $or: [ { subject }, { subject: null }, { subject: { $exists: false } } ] }]);
+      }
+      if (typeof grade === 'number') {
+        selector.$and = (selector.$and || []).concat([{ $or: [ { grade }, { grade: null }, { grade: { $exists: false } } ] }]);
+      }
+      if (typeof chapter === 'number') {
+        selector.$and = (selector.$and || []).concat([{ $or: [ { chapter }, { chapter: null }, { chapter: { $exists: false } } ] }]);
+      }
+      if (topic) {
+        selector.$and = (selector.$and || []).concat([{ $or: [ { topic }, { topic: null }, { topic: { $exists: false } } ] }]);
+      }
+
+      const cursor = materials.find(selector.$and ? selector : {}, { projection: { _id: 0 } }).sort({ created_at: -1 }).limit(200);
+      const raw = await cursor.toArray();
       items = Array.isArray(raw) ? raw.map(toUiItem) : [];
     } catch {
+      db_ok = false;
       items = [];
     }
 
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_alias_v2' }));
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_alias_v3' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials alias.', 'materials/list_alias', { db_ok: false }, new Headers({ 'X-Debug': 'materials:list_alias_error' }));
   }
