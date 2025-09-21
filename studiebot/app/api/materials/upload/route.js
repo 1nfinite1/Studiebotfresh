@@ -6,6 +6,8 @@ import { randomUUID } from 'crypto';
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 const BUCKET_NAME = process.env.GRIDFS_BUCKET || 'uploads';
+const PDF = 'application/pdf';
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
@@ -17,27 +19,12 @@ function err(status, message, where = 'materials/upload', extra = {}, headers) {
   return NextResponse.json({ ...base, ...extra }, { status, headers });
 }
 
-function getBaseUrl(req) {
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  const host = req.headers.get('host');
-  if (!host) return null;
-  return `${proto}://${host}`;
-}
-
-async function autoIngest(req, material_id) {
-  try {
-    const base = getBaseUrl(req);
-    if (!base) return false;
-    await fetch(`${base}/api/materials/ingest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ material_id }),
-      cache: 'no-store',
-    });
-    return true;
-  } catch {
-    return false;
-  }
+function detectType(mime, filename) {
+  if (mime === PDF) return 'pdf';
+  if (mime === DOCX) return 'docx';
+  if (filename && filename.toLowerCase().endsWith('.docx')) return 'docx';
+  if (filename && filename.toLowerCase().endsWith('.pdf')) return 'pdf';
+  return 'unknown';
 }
 
 export async function POST(req) {
@@ -67,12 +54,14 @@ export async function POST(req) {
     const chapter = chapterRaw !== null && chapterRaw !== undefined ? Number(chapterRaw) : null;
 
     const mime = file.type || 'application/octet-stream';
-    const filename = file.name || `upload-${Date.now()}.pdf`;
+    const filename = file.name || `upload-${Date.now()}`;
 
-    if (mime !== 'application/pdf') {
-      return err(400, 'Alleen PDF-bestanden zijn toegestaan (application/pdf).', 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:not_pdf' }));
+    // Accept PDF and DOCX
+    if (![PDF, DOCX].includes(mime)) {
+      return err(400, 'Alleen PDF of DOCX zijn toegestaan.', 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:not_allowed_mime' }));
     }
 
+    // size checks
     if (typeof file.size === 'number' && file.size > MAX_BYTES) {
       return err(413, `Bestand te groot (max ${MAX_BYTES} bytes).`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:too_large' }));
     }
@@ -86,29 +75,30 @@ export async function POST(req) {
       const db = await getDatabase();
       const bucket = new GridFSBucket(db, { bucketName: BUCKET_NAME });
 
+      // 1) Save file to GridFS
       const uploadStream = bucket.openUploadStream(filename, {
         contentType: mime,
         metadata: { subject, topic, grade, chapter },
       });
-
       await new Promise((resolve, reject) => {
         uploadStream.on('error', reject);
         uploadStream.on('finish', resolve);
         uploadStream.end(buffer);
       });
-
       const fileId = uploadStream.id?.toString?.() || String(uploadStream.id);
-      const materials = db.collection('materials');
 
+      // 2) Create material doc (segments start at 0)
+      const materials = db.collection('materials');
       const material_id = `mat_${randomUUID()}`;
       const nowIso = new Date().toISOString();
+      const type = detectType(mime, filename);
       const doc = {
         material_id,
         id: material_id,
         setId: material_id,
         filename,
         mime,
-        type: 'pdf',
+        type,
         size: buffer.length,
         status: 'ready',
         createdAt: nowIso,
@@ -122,11 +112,21 @@ export async function POST(req) {
         created_at: nowIso,
         active: false,
       };
-
       await materials.insertOne(doc);
 
-      // Auto-ingest to bump segments
-      await autoIngest(req, material_id);
+      // 3) Synchronous stub-ingest: immediately create 1 segment and update segments count
+      const segmentsCol = db.collection('material_segments');
+      const segment_id = `seg_${randomUUID()}`;
+      const preview = doc.filename ? `Stub from filename: ${doc.filename}` : 'Placeholder segment';
+      await segmentsCol.insertOne({
+        segment_id,
+        material_id,
+        text: preview,
+        tokens: Math.max(10, Math.round(preview.length / 4)),
+        created_at: nowIso,
+      });
+      const newCount = await segmentsCol.countDocuments({ material_id });
+      await materials.updateOne({ material_id }, { $set: { segments: newCount } });
 
       return ok({
         db_ok: true,
@@ -143,10 +143,10 @@ export async function POST(req) {
           createdAt: doc.createdAt,
           setId: doc.setId,
           uploader: doc.uploader,
-          segments: doc.segments,
+          segments: newCount,
         },
         storage: { driver: 'gridfs', file_id: fileId },
-      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_v4' }));
+      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_sync_ingest' }));
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }

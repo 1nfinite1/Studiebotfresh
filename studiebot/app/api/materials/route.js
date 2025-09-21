@@ -1,24 +1,30 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { fetchMaterials, getMaterialsStats } from '../../../infra/db/materialsService';
 import { getDatabase } from '../../../infra/db/mongoClient';
 
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...data }, { status, headers });
+  const h = new Headers(headers || {});
+  h.set('Cache-Control', 'no-store');
+  return NextResponse.json({ ...base, ...data }, { status, headers: h });
 }
 
 function err(status, message, where = 'materials/list', extra = {}, headers) {
   const base = { ok: false, error: message, where, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...extra }, { status, headers });
+  const h = new Headers(headers || {});
+  h.set('Cache-Control', 'no-store');
+  return NextResponse.json({ ...base, ...extra }, { status, headers: h });
 }
 
 function toUiItem(item) {
-  const id = item.material_id || item.id || item.materialId || item._id || null;
-  const setId = item.material_id || item.setId || id;
+  const material_id = item.material_id || item.id || item.materialId || item._id || null;
+  const id = material_id;
+  const setId = material_id;
   const filename = item.filename || item.file?.filename || 'bestand.pdf';
-  const mime = item.mime || item.file?.mime || item.file?.type || (item.type === 'pdf' ? 'application/pdf' : null);
-  const type = 'pdf';
+  const mime = item.mime || item.file?.mime || item.file?.type || null;
+  const type = item.type || (mime === 'application/pdf' ? 'pdf' : mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'unknown');
   const size = item.size ?? item.file?.size ?? null;
   const status = item.status || (item.active ? 'active' : 'ready');
   const createdAt = item.createdAt || item.created_at || null;
@@ -36,7 +42,7 @@ function toUiItem(item) {
     uploader,
     segments,
     active,
-    material_id: item.material_id || id,
+    material_id,
     storage: item.storage || null,
     subject: item.subject ?? null,
     topic: item.topic ?? null,
@@ -82,7 +88,7 @@ export async function GET(req) {
       items = [];
     }
 
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_v3' }));
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_v4' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));
   }

@@ -1,29 +1,36 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { fetchMaterials } from '../../../../infra/db/materialsService';
 import { getDatabase } from '../../../../infra/db/mongoClient';
 
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...data }, { status, headers });
+  const h = new Headers(headers || {});
+  h.set('Cache-Control', 'no-store');
+  return NextResponse.json({ ...base, ...data }, { status, headers: h });
 }
 
 function err(status, message, where = 'materials/list_alias', extra = {}, headers) {
   const base = { ok: false, error: message, where, policy: { guardrail_triggered: false, reason: 'none' } };
-  return NextResponse.json({ ...base, ...extra }, { status, headers });
+  const h = new Headers(headers || {});
+  h.set('Cache-Control', 'no-store');
+  return NextResponse.json({ ...base, ...extra }, { status, headers: h });
 }
 
 function toUiItem(item) {
-  const id = item.id || item.material_id || item.materialId || item._id || null;
+  const material_id = item.material_id || item.id || item.materialId || item._id || null;
+  const id = material_id;
+  const setId = material_id;
   const filename = item.filename || item.file?.filename || 'bestand.pdf';
-  const mime = item.mime || item.file?.mime || item.file?.type || (item.type === 'pdf' ? 'application/pdf' : null);
-  const type = item.type || (mime === 'application/pdf' ? 'pdf' : 'unknown');
+  const mime = item.mime || item.file?.mime || item.file?.type || null;
+  const type = item.type || (mime === 'application/pdf' ? 'pdf' : mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'docx' : 'unknown');
   const size = item.size ?? item.file?.size ?? null;
-  const status = item.status || 'ready';
+  const status = item.status || (item.active ? 'active' : 'ready');
   const createdAt = item.createdAt || item.created_at || null;
-  const setId = item.setId || id;
   const uploader = item.uploader || 'docent';
   const segments = typeof item.segments === 'number' ? item.segments : 0;
+  const active = !!item.active || status === 'active';
   return {
     id,
     setId,
@@ -34,7 +41,8 @@ function toUiItem(item) {
     createdAt,
     uploader,
     segments,
-    material_id: item.material_id || id,
+    active,
+    material_id,
     storage: item.storage || null,
     subject: item.subject ?? null,
     topic: item.topic ?? null,
@@ -77,7 +85,7 @@ export async function GET(req) {
       items = [];
     }
 
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_alias' }));
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_alias_v2' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials alias.', 'materials/list_alias', { db_ok: false }, new Headers({ 'X-Debug': 'materials:list_alias_error' }));
   }
