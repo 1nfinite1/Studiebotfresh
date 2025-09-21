@@ -113,8 +113,9 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
       return response;
     }
 
-    const system = `Je bent Studiebot, een vriendelijke studiecoach. Alle zichtbare tekst is Nederlands. Gebruik uitsluitend JSON. Geef: tutor_message (≤2 korte zinnen), hints (1–3 bullets), follow_up_question (1 vraag).`
-    const user = `Onderwerp: ${topicId || 'algemeen'}\nBloom: ${currentBloom}\nMoeilijkheid: ${currentDifficulty}\nLeerling: ${text || 'geen invoer'}\n\nLesmateriaal (samengevat uit segmenten):\n${ctx.text.slice(0, 12000)}`;
+    const { buildLearnSystem, buildLearnUser } = await import('../prompts');
+    const system = buildLearnSystem();
+    const user = buildLearnUser(topicId || 'algemeen', text || '', ctx.text || '');
 
     try {
       const resp = await c.chat.completions.create({ model: MODELS.hints, temperature: 0.3, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
