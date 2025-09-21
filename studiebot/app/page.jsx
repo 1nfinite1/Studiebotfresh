@@ -333,6 +333,7 @@ function ChatPanel({ mode, context }) {
   const [showTyping, setShowTyping] = useState(false)
   const listRef = useRef(null)
   const { fetchGlossary } = useGlossary()
+  const GLOSSARY_ENABLED = process.env.NEXT_PUBLIC_GLOSSARY_ENABLED === 'true'
   
   useEffect(() => {
     const el = listRef.current
