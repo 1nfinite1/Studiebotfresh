@@ -12,7 +12,14 @@ export async function POST(req) {
     if (res?.no_material) {
       return jsonErr(400, 'no_material', res?.message || 'Er is nog geen lesmateriaal geactiveerd voor dit vak/leerjaar/hoofdstuk.', { policy: res?.policy, db_ok: res?.db_ok }, new Headers({ 'X-Debug': 'llm:learn|no_material' }));
     }
-    const headers = new Headers({ 'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled', 'X-Debug': 'llm:learn|used_material' });
+    const headers = new Headers({
+      'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled',
+      'X-Debug': 'llm:learn|used_material',
+      'X-Context-Size': String(res?.context_len || 0),
+      ...(res?.model ? { 'X-Model': String(res.model) } : {}),
+      ...(res?.usage?.prompt_tokens != null ? { 'X-Prompt-Tokens': String(res.usage.prompt_tokens) } : {}),
+      ...(res?.usage?.completion_tokens != null ? { 'X-Completion-Tokens': String(res.usage.completion_tokens) } : {}),
+    });
     const payload = { tutor_message: res?.tutor_message || '', hints: Array.isArray(res?.hints) ? res.hints : [], follow_up_question: res?.follow_up_question || '', defined_terms: Array.isArray(res?.defined_terms) ? res.defined_terms : [], next_bloom: res?.next_bloom || 'remember', next_difficulty: res?.next_difficulty || 'easy', policy: res?.policy || { guardrail_triggered: false, reason: 'none' }, db_ok: Boolean(res?.db_ok) };
     return jsonOk(payload, headers);
   } catch (error) {

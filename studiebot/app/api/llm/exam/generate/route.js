@@ -15,7 +15,14 @@ export async function POST(req) {
     if (res?.no_material) {
       return jsonErr(400, 'no_material', res?.message || 'Er is nog geen lesmateriaal geactiveerd.', { policy: res?.policy, db_ok: res?.db_ok }, new Headers({ 'X-Debug': 'llm:exam|no_material' }));
     }
-    const headers = new Headers({ 'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled', 'X-Debug': 'llm:exam|used_material' });
+    const headers = new Headers({
+      'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled',
+      'X-Debug': 'llm:exam|used_material',
+      'X-Context-Size': String(res?.context_len || 0),
+      ...(res?.model ? { 'X-Model': String(res.model) } : {}),
+      ...(res?.usage?.prompt_tokens != null ? { 'X-Prompt-Tokens': String(res.usage.prompt_tokens) } : {}),
+      ...(res?.usage?.completion_tokens != null ? { 'X-Completion-Tokens': String(res.usage.completion_tokens) } : {}),
+    });
     const exam_id = `ex_${randomUUID()}`;
     const items = (Array.isArray(res?.questions) ? res.questions : []).map((q, idx) => ({ qid: q.question_id || `Q${idx + 1}`, type: q.type || 'short_answer', stem: String(q.stem || '').slice(0, 500), choices: Array.isArray(q.choices) ? q.choices : [], answer_key: q.answer_key || { correct: [], explanation: '' }, bloom_level: q.bloom_level || 'remember', difficulty: q.difficulty || 'medium', source_ids: Array.isArray(q.source_ids) ? q.source_ids : [], hint: null, defined_terms: Array.isArray(q.defined_terms) ? q.defined_terms : [], }));
     putExam(exam_id, items);
