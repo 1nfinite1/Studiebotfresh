@@ -95,7 +95,7 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
   )
 }
 
-function MaterialsAdmin() { /* unchanged, omitted for brevity in this snippet */ }
+function MaterialsAdmin() { /* unchanged for brevity */ }
 
 function ChatPanel({ mode, context }) {
   const [messages, setMessages] = useState([])
@@ -117,8 +117,21 @@ function ChatPanel({ mode, context }) {
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      const res = await llm.learn({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-      setMessages((m) => [...m, { role: 'assistant', content: res?.message || '...' }])
+      if (mode === 'Overhoren') {
+        // Use the quiz route only
+        const q = await llm.generateQuizQuestion({ topicId, objective: '', currentBloom: 'remember', currentDifficulty: 'easy', subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+        let content = q?.stem || ''
+        if (Array.isArray(q?.choices) && q.choices.length > 0) {
+          const letters = ['A', 'B', 'C', 'D', 'E', 'F']
+          const lines = q.choices.slice(0, 6).map((c, i) => `${letters[i]}) ${c}`)
+          content = [content, ...lines].filter(Boolean).join('\n')
+        }
+        setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      } else {
+        // Learn route (no hints)
+        const res = await llm.learn({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+        setMessages((m) => [...m, { role: 'assistant', content: res?.message || '...' }])
+      }
     } catch (e) { setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }]) } finally { setLoading(false) }
   }
 
@@ -133,7 +146,7 @@ function ChatPanel({ mode, context }) {
           </div>
         ))}
         {showTyping && (
-          <div className="max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed bg.white/15 text-white">
+          <div className="max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed bg-white/15 text-white">
             <span className="typing-dots" aria-live="polite" aria-label={loadingLabel}><span className="dot"></span><span className="dot"></span><span className="dot"></span></span>
           </div>
         )}
@@ -146,9 +159,9 @@ function ChatPanel({ mode, context }) {
   )
 }
 
-/* OefentoetsPanel unchanged from previous commit in structure (generate → take → report) */
+// OefentoetsPanel stays as in previous commit (generate → take → report)
 
-function Workspace({ context, mode, setMode }) { /* omitted non-essential props for brevity */
+function Workspace({ context, mode, setMode }) {
   return (
     <div className="container mx-auto mt-2">
       <div className="mb-2 w-full flex flex-wrap items-center justify-center gap-2 text-center">
