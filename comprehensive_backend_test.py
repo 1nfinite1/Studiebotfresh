@@ -129,7 +129,7 @@ class StudiebotBackendTester:
 
     def seed_demo_material(self):
         """Seed dummy material record for testing"""
-        if not self.db:
+        if self.db is None:
             return False
             
         try:
