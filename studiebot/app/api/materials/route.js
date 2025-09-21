@@ -14,17 +14,17 @@ function err(status, message, where = 'materials/list', extra = {}, headers) {
 }
 
 function toUiItem(item) {
-  // Normalize both legacy records and new GridFS-backed materials to a common UI shape
-  const id = item.id || item.material_id || item.materialId || item._id || null;
+  const id = item.material_id || item.id || item.materialId || item._id || null;
+  const setId = item.material_id || item.setId || id;
   const filename = item.filename || item.file?.filename || 'bestand.pdf';
   const mime = item.mime || item.file?.mime || item.file?.type || (item.type === 'pdf' ? 'application/pdf' : null);
-  const type = item.type || (mime === 'application/pdf' ? 'pdf' : 'unknown');
+  const type = 'pdf';
   const size = item.size ?? item.file?.size ?? null;
-  const status = item.status || 'ready';
+  const status = item.status || (item.active ? 'active' : 'ready');
   const createdAt = item.createdAt || item.created_at || null;
-  const setId = item.setId || id; // UI expects setId; use id when absent
   const uploader = item.uploader || 'docent';
   const segments = typeof item.segments === 'number' ? item.segments : 0;
+  const active = !!item.active || status === 'active';
   return {
     id,
     setId,
@@ -35,6 +35,7 @@ function toUiItem(item) {
     createdAt,
     uploader,
     segments,
+    active,
     material_id: item.material_id || id,
     storage: item.storage || null,
     subject: item.subject ?? null,
@@ -81,7 +82,7 @@ export async function GET(req) {
       items = [];
     }
 
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_v2' }));
+    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_v3' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));
   }

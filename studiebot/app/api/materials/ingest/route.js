@@ -60,12 +60,12 @@ export async function POST(req) {
     try {
       body = await req.json();
     } catch {
-      return err(400, 'Kon JSON niet lezen.', 'materials/ingest', {}, new Headers({ 'X-Debug': 'materials:ingest|bad_json' }));
+      return err(400, 'Kon JSON niet lezen.', 'materials/ingest', { db_ok: false }, new Headers({ 'X-Debug': 'materials:ingest|bad_json' }));
     }
 
     const material_id = String(body.material_id || body.setId || '').trim();
     if (!material_id) {
-      return err(400, 'material_id of setId is verplicht.', 'materials/ingest', {}, new Headers({ 'X-Debug': 'materials:ingest|missing_id' }));
+      return err(400, 'material_id of setId is verplicht.', 'materials/ingest', { db_ok: false }, new Headers({ 'X-Debug': 'materials:ingest|missing_id' }));
     }
 
     const db = await getDatabase();
@@ -80,10 +80,10 @@ export async function POST(req) {
       ],
     });
     if (!doc) {
-      return err(404, 'Materiaal niet gevonden.', 'materials/ingest', { material_id }, new Headers({ 'X-Debug': 'materials:ingest|not_found' }));
+      return err(404, 'Materiaal niet gevonden.', 'materials/ingest', { material_id, db_ok: true }, new Headers({ 'X-Debug': 'materials:ingest|not_found' }));
     }
 
-    // Try to read a small preview from GridFS; fallback to filename
+    // preview from GridFS
     let preview = null;
     const fileIdStr = doc?.storage?.file_id || null;
     const bucketName = doc?.storage?.bucket || 'uploads';
@@ -116,11 +116,11 @@ export async function POST(req) {
     );
 
     return ok(
-      { material_id, segments: count },
+      { db_ok: true, material_id, segments: count },
       200,
       new Headers({ 'X-Debug': 'materials:ingest|created_segments' })
     );
   } catch (e) {
-    return err(500, 'Onverwachte serverfout bij ingest.', 'materials/ingest', {}, new Headers({ 'X-Debug': 'materials:ingest|server_error' }));
+    return err(500, 'Onverwachte serverfout bij ingest.', 'materials/ingest', { db_ok: false }, new Headers({ 'X-Debug': 'materials:ingest|server_error' }));
   }
 }

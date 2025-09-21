@@ -18,12 +18,12 @@ async function handleActivate(req) {
     try {
       body = await req.json();
     } catch {
-      return err(400, 'Kon JSON niet lezen.', 'materials/activate', {}, new Headers({ 'X-Debug': 'materials:activate|bad_json' }));
+      return err(400, 'Kon JSON niet lezen.', 'materials/activate', { db_ok: false }, new Headers({ 'X-Debug': 'materials:activate|bad_json' }));
     }
 
     const material_id = String(body.material_id || body.setId || '').trim();
     if (!material_id) {
-      return err(400, 'material_id of setId is verplicht.', 'materials/activate', {}, new Headers({ 'X-Debug': 'materials:activate|missing_id' }));
+      return err(400, 'material_id of setId is verplicht.', 'materials/activate', { db_ok: false }, new Headers({ 'X-Debug': 'materials:activate|missing_id' }));
     }
 
     const db = await getDatabase();
@@ -37,7 +37,7 @@ async function handleActivate(req) {
       ],
     });
     if (!doc) {
-      return err(404, 'Materiaal niet gevonden.', 'materials/activate', { material_id }, new Headers({ 'X-Debug': 'materials:activate|not_found' }));
+      return err(404, 'Materiaal niet gevonden.', 'materials/activate', { material_id, db_ok: true }, new Headers({ 'X-Debug': 'materials:activate|not_found' }));
     }
 
     const segCount = Number(doc.segments || 0);
@@ -45,6 +45,7 @@ async function handleActivate(req) {
       return NextResponse.json(
         {
           ok: false,
+          db_ok: true,
           reason: 'no_segments',
           message: 'Geen segmenten gevonden voor dit materiaal.',
           material_id,
@@ -59,12 +60,12 @@ async function handleActivate(req) {
     );
 
     return ok(
-      { activated: true, material_id },
+      { db_ok: true, activated: true, material_id },
       200,
       new Headers({ 'X-Debug': 'materials:activate|ok' })
     );
   } catch (e) {
-    return err(500, 'Onverwachte serverfout bij activeren.', 'materials/activate', {}, new Headers({ 'X-Debug': 'materials:activate|server_error' }));
+    return err(500, 'Onverwachte serverfout bij activeren.', 'materials/activate', { db_ok: false }, new Headers({ 'X-Debug': 'materials:activate|server_error' }));
   }
 }
 
