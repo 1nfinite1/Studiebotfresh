@@ -73,3 +73,21 @@ export async function webGenerateExam(payload) {
   });
   return r.json();
 }
+
+/**
+ * Submit exam answers for grading
+ * @param {Object} payload
+ * @param {Array<{idx:number, question:string, answer:string}>} payload.answers
+ * @param {string} payload.subject
+ * @param {string|number} payload.grade
+ * @param {string|number} payload.chapter
+ * @returns {Promise<Object>} legacy-safe grading JSON
+ */
+export async function webSubmitExam(payload) {
+  const r = await fetch('/api/llm/exam/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {}),
+  });
+  return r.json();
+}

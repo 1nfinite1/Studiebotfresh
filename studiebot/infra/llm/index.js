@@ -1,4 +1,4 @@
-import { webGenerateHints, webGenerateQuizQuestion, webGradeQuiz, webGenerateExam } from './webClient';
+import { webGenerateHints, webGenerateQuizQuestion, webGradeQuiz, webGenerateExam, webSubmitExam } from './webClient';
 import noopLLM from './noopClient';
 
 /**
@@ -23,8 +23,8 @@ export function getLLMClient() {
         notice: res.notice
       };
     },
-    async generateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty }) {
-      const res = await webGenerateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty });
+    async generateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty, subject, grade, chapter }) {
+      const res = await webGenerateQuizQuestion({ topicId, objective, currentBloom, currentDifficulty, subject, grade, chapter });
       return {
         question_id: res.question_id,
         type: res.type,
@@ -39,8 +39,8 @@ export function getLLMClient() {
         notice: res.notice
       };
     },
-    async gradeQuiz({ answers, questions, objectives, isExam }) {
-      const res = await webGradeQuiz({ answers, questions, objectives, isExam });
+    async gradeQuiz({ answers, questions, objectives, isExam, subject, grade, chapter }) {
+      const res = await webGradeQuiz({ answers, questions, objectives, isExam, subject, grade, chapter });
       return {
         is_correct: res.is_correct,
         score: Number(res.score) || 0,
@@ -52,13 +52,18 @@ export function getLLMClient() {
         notice: res.notice
       };
     },
-    async generateExam({ topicId, blueprint, totalQuestions }) {
-      const res = await webGenerateExam({ topicId, blueprint, totalQuestions });
+    async generateExam({ topicId, blueprint, totalQuestions, subject, grade, chapter }) {
+      const res = await webGenerateExam({ topicId, blueprint, totalQuestions, subject, grade, chapter });
       return {
-        questions: Array.isArray(res.questions) ? res.questions : [],
+        questions: Array.isArray(res.items) ? res.items : (Array.isArray(res.questions) ? res.questions : []),
         blueprint: res.blueprint || {},
+        exam_id: res.exam_id,
         notice: res.notice
       };
     },
+    async submitExam({ answers, subject, grade, chapter }) {
+      const res = await webSubmitExam({ answers, subject, grade, chapter });
+      return res; // Return legacy JSON as-is
+    }
   };
 }

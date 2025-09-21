@@ -204,7 +204,7 @@ function MaterialsAdmin() {
   const onUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!/(\.pdf|\.docx)$/i.test(file.name)) { alert('Alleen .pdf of .docx toegestaan'); e.target.value = ''; return }
+    if (!(/(\.pdf|\.docx)$/i).test(file.name)) { alert('Alleen .pdf of .docx toegestaan'); e.target.value = ''; return }
     if (file.size > 10 * 1024 * 1024) { alert('Bestand te groot (max 10MB)'); e.target.value = ''; return }
     setUploading(true); setMsg('Bezig met verwerken…')
     try {
@@ -246,7 +246,6 @@ function MaterialsAdmin() {
   const onDelete = async (id) => {
     if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) return
     try {
-      // Use alias endpoint that supports DELETE with query id
       const res = await apiFetch(`/api/materials/item?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       const data = await res.json()
       dlog('[materials:delete] raw response', data)
@@ -261,7 +260,7 @@ function MaterialsAdmin() {
       const data = await res.json()
       dlog('[materials:preview] raw response', data)
       if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Preview mislukt')
-      const text = Array.isArray(data?.data?.segments) ? data.data.segments.join('\n\n') : data?.data?.preview || data?.preview?.textSnippet || ''
+      const text = data?.preview?.textSnippet || data?.data?.preview || ''
       alert((text || 'Geen preview beschikbaar').slice(0, 1200))
     } catch (e) { alert(e.message) }
   }
@@ -372,10 +371,16 @@ function ChatPanel({ mode, context }) {
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      const payload = { topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk }
-      const { tutor_message, hints, follow_up_question, notice } = await llm.generateHints(payload)
-      const content = [notice ? `(${notice})` : null, tutor_message, ...(hints || []), follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
-      setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      if (mode === 'Overhoren') {
+        // For now, reuse hints flow but ensure context is sent; quiz flow can be plugged later
+        const res = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+        const content = [res.tutor_message, ...(res.hints || []), res.follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
+        setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      } else {
+        const { tutor_message, hints, follow_up_question, notice } = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+        const content = [notice ? `(${notice})` : null, tutor_message, ...(hints || []), follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
+        setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+      }
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
@@ -411,6 +416,108 @@ function ChatPanel({ mode, context }) {
   )
 }
 
+function OefentoetsPanel({ context }) {
+  const [num, setNum] = useState(5)
+  const [items, setItems] = useState([])
+  const [answers, setAnswers] = useState({})
+  const [examId, setExamId] = useState(null)
+  const [phase, setPhase] = useState('choose') // choose | take | report
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const llm = getLLMClient()
+
+  const startExam = async () => {
+    setLoading(true)
+    try {
+      const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
+      const res = await llm.generateExam({ topicId, totalQuestions: num, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+      const q = Array.isArray(res.questions) ? res.questions : []
+      setItems(q.map((it, idx) => ({ idx: idx + 1, question: it.stem || it.question || '' })))
+      setExamId(res.exam_id || null)
+      setPhase('take')
+    } catch (e) { alert('Oefentoets genereren mislukt.'); } finally { setLoading(false) }
+  }
+
+  const submitExam = async () => {
+    setLoading(true)
+    try {
+      const answersArr = items.map((it) => ({ idx: it.idx, question: it.question, answer: answers[it.idx] || '' }))
+      const res = await llm.submitExam({ answers: answersArr, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
+      if (!res || res.ok === false) throw new Error(res?.message || 'Nakijken mislukt')
+      setReport(res)
+      setPhase('report')
+    } catch (e) { alert(e.message || 'Nakijken mislukt'); } finally { setLoading(false) }
+  }
+
+  if (phase === 'choose') {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
+        <p className="mb-3 text-center text-white/90">Kies het aantal vragen en start de oefentoets.</p>
+        <div className="mb-4 flex justify-center gap-3">
+          <button className={`rounded-full px-4 py-2 ${num === 5 ? 'bg-white text-purple-700' : 'bg-white/10 text-white border border-white/30'}`} onClick={() => setNum(5)}>5 vragen</button>
+          <button className={`rounded-full px-4 py-2 ${num === 10 ? 'bg-white text-purple-700' : 'bg-white/10 text-white border border-white/30'}`} onClick={() => setNum(10)}>10 vragen</button>
+        </div>
+        <div className="flex justify-center">
+          <button onClick={startExam} disabled={loading} className="rounded-xl bg-white px-6 py-2 font-semibold text-purple-700 hover:bg-purple-100">Start oefentoets</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'take') {
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white p-6 ring-1 ring-white/20 text-purple-900">
+        <h3 className="mb-4 text-xl font-bold">Oefentoets</h3>
+        <ol className="space-y-4 list-decimal list-inside">
+          {items.map((it) => (
+            <li key={it.idx} className="space-y-2">
+              <p className="font-semibold">{it.question}</p>
+              <textarea value={answers[it.idx] || ''} onChange={(e) => setAnswers((a) => ({ ...a, [it.idx]: e.target.value }))} placeholder="Typ je antwoord hier..." className="w-full h-28 rounded-md border border-purple-200 p-2" />
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex justify-end">
+          <button onClick={submitExam} disabled={loading} className="rounded-xl bg-green-600 px-6 py-2 font-semibold text-white hover:bg-green-700">Inleveren</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'report' && report) {
+    const s = report.score || { percentage: 0, correct: 0, partial: 0, wrong: 0, total: 0 }
+    return (
+      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white p-6 ring-1 ring-white/20 text-purple-900">
+        <h3 className="mb-2 text-2xl font-extrabold">Toetsrapport</h3>
+        <p className="mb-1 text-sm text-purple-700">Score: <span className="font-bold">{s.percentage}%</span> • Goed: {s.correct} • Gedeeltelijk: {s.partial} • Fout: {s.wrong} • Totaal: {s.total}</p>
+        {report.summary && <p className="mb-4 text-sm">{report.summary}</p>}
+        <div className="divide-y divide-purple-100 border-t border-b">
+          {Array.isArray(report.feedback) && report.feedback.map((fb, i) => (
+            <details key={i} className="group py-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between">
+                <span className="flex items-center gap-2 font-semibold"><span>{fb.emoji || '❔'}</span><span>Vraag {i + 1}</span></span>
+                <span className="text-sm text-purple-500 group-open:hidden">Open</span>
+                <span className="text-sm text-purple-500 hidden group-open:inline">Sluit</span>
+              </summary>
+              <div className="mt-2 space-y-2 text-sm">
+                <p><span className="font-semibold">Vraag:</span> {fb.question}</p>
+                <p><span className="font-semibold">Jouw antwoord:</span> {fb.studentAnswer || '(leeg)'}</p>
+                <p><span className="font-semibold">Uitleg:</span> {fb.explanation}</p>
+                <p><span className="font-semibold">Modelantwoord:</span> {fb.modelAnswer}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={() => { setPhase('choose'); setItems([]); setAnswers({}); setReport(null) }} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Nieuwe toets</button>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
   return (
     <div className="container mx-auto mt-2">
@@ -431,160 +538,7 @@ function Workspace({ context, mode, setMode, setModeFromCTA, guidance }) {
       {mode === 'Leren' && <ChatPanel mode={mode} context={context} />}
       {mode === 'Overhoren' && <ChatPanel mode={mode} context={context} />}
       {mode === 'Oefentoets' && (
-        <OefentoetsPanel context={context} onSwitchToOverhoren={(focus) => setModeFromCTA('Overhoren', focus)} />
-      )}
-    </div>
-  )
-}
-
-function OefentoetsPanel({ context, onSwitchToOverhoren }) {
-  const [questions, setQuestions] = useState([])
-  const [currentQ, setCurrentQ] = useState(0)
-  const [answers, setAnswers] = useState({})
-  const [submitted, setSubmitted] = useState(false)
-  const [score, setScore] = useState(null)
-  const [feedback, setFeedback] = useState([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    // Generate mock questions for the test
-    const mockQuestions = [
-      { id: 1, question: "Wat is de hoofdstad van Nederland?", type: "open" },
-      { id: 2, question: "In welk jaar begon de Tweede Wereldoorlog?", type: "open" },
-      { id: 3, question: "Wat is 2 + 2?", type: "open" }
-    ]
-    setQuestions(mockQuestions)
-    setCurrentQ(0)
-    setAnswers({})
-    setSubmitted(false)
-    setScore(null)
-    setFeedback([])
-  }, [context])
-
-  const handleAnswer = (value) => {
-    setAnswers(prev => ({ ...prev, [questions[currentQ]?.id]: value }))
-  }
-
-  const nextQuestion = () => {
-    if (currentQ < questions.length - 1) {
-      setCurrentQ(currentQ + 1)
-    }
-  }
-
-  const prevQuestion = () => {
-    if (currentQ > 0) {
-      setCurrentQ(currentQ - 1)
-    }
-  }
-
-  const submitTest = async () => {
-    setLoading(true)
-    try {
-      const llm = getLLMClient()
-      const answerArray = questions.map(q => answers[q.id] || '')
-      const result = await llm.gradeQuiz({ answers: answerArray, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-      setScore(result.score || 0)
-      setFeedback(result.feedback || [])
-      setSubmitted(true)
-    } catch (e) {
-      console.error('Failed to grade quiz:', e)
-      setScore(0)
-      setFeedback(['Er ging iets mis bij het nakijken.'])
-      setSubmitted(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const currentQuestion = questions[currentQ]
-
-  if (submitted) {
-    return (
-      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
-        <div className="text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">Resultaat</h3>
-          <div className="text-4xl font-bold text-white mb-2">{score}%</div>
-          <div className="space-y-2 mb-6">
-            {feedback.map((item, i) => (
-              <p key={i} className="text-white/90">
-                <ProcessedText>{item}</ProcessedText>
-              </p>
-            ))}
-          </div>
-          <div className="flex gap-3 justify-center">
-            <FullButton onClick={() => window.location.reload()}>Opnieuw</FullButton>
-            <FullButton variant="secondary" onClick={() => onSwitchToOverhoren()}>
-              Verder oefenen
-            </FullButton>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (questions.length === 0) {
-    return (
-      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
-        <p className="text-white text-center">Oefentoets wordt voorbereid...</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-6 ring-1 ring-white/20">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-xl font-bold text-white">
-          Oefentoets - Vraag {currentQ + 1} van {questions.length}
-        </h3>
-        <div className="text-sm text-white/70">
-          {Object.keys(answers).length}/{questions.length} beantwoord
-        </div>
-      </div>
-      
-      {currentQuestion && (
-        <div className="space-y-4">
-          <div className="rounded-xl bg-white/15 p-4">
-            <p className="text-white font-medium">
-              <ProcessedText>{currentQuestion.question}</ProcessedText>
-            </p>
-          </div>
-          
-          <textarea
-            value={answers[currentQuestion.id] || ''}
-            onChange={(e) => handleAnswer(e.target.value)}
-            placeholder="Typ je antwoord hier..."
-            className="w-full h-32 rounded-xl border border-white/20 bg-white/90 p-3 text-purple-800 outline-none placeholder:text-purple-300 focus:ring-2 focus:ring-purple-300 resize-none"
-          />
-          
-          <div className="flex items-center justify-between">
-            <button
-              onClick={prevQuestion}
-              disabled={currentQ === 0}
-              className="rounded-xl bg-white/20 px-4 py-2 text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Vorige
-            </button>
-            
-            <div className="flex gap-2">
-              {currentQ < questions.length - 1 ? (
-                <button
-                  onClick={nextQuestion}
-                  className="rounded-xl bg-white px-4 py-2 font-semibold text-purple-700 hover:bg-purple-100"
-                >
-                  Volgende
-                </button>
-              ) : (
-                <button
-                  onClick={submitTest}
-                  disabled={loading || Object.keys(answers).length === 0}
-                  className="rounded-xl bg-green-600 px-6 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Nakijken...' : 'Inleveren'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <OefentoetsPanel context={context} />
       )}
     </div>
   )
