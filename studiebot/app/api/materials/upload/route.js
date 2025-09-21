@@ -3,12 +3,14 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '../../../../infra/db/mongoClient';
 import { GridFSBucket } from 'mongodb';
 import { randomUUID } from 'crypto';
+import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 const BUCKET_NAME = process.env.GRIDFS_BUCKET || 'uploads';
 const PDF = 'application/pdf';
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const LEGACY = process.env.LEGACY_MATERIALS_API !== 'false'; // default true
+const LEGACY = process.env.LEGACY_MATERIALS_API !== 'false';
 
 function ok(data = {}, status = 200, headers) {
   const base = { ok: true, policy: { guardrail_triggered: false, reason: 'none' } };
@@ -35,7 +37,6 @@ function legacyField(value, fallback = 'Onbekend') {
 }
 
 function toLegacyMaterial(doc) {
-  // Ensure legacy-required fields are present
   const segments = Math.max(1, Number(doc.segments || 0));
   const status = doc.active ? 'active' : (doc.status || 'ready');
   return {
@@ -55,6 +56,40 @@ function toLegacyMaterial(doc) {
     pagesCount: segments,
     active: !!doc.active,
   };
+}
+
+async function extractTextFromBuffer(mime, buffer) {
+  try {
+    if (mime === PDF) {
+      const res = await pdf(buffer);
+      return String(res?.text || '');
+    }
+    if (mime === DOCX) {
+      const res = await mammoth.extractRawText({ buffer });
+      return String(res?.value || '');
+    }
+  } catch (_) {
+    // ignore
+  }
+  return '';
+}
+
+function sanitizeText(text) {
+  if (!text) return '';
+  // collapse excessive whitespace and normalize
+  return String(text).replace(/\r/g, ' ').replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function chunkText(text, maxLen = 1800) {
+  const chunks = [];
+  let i = 0;
+  while (i < text.length) {
+    const end = Math.min(i + maxLen, text.length);
+    const slice = text.slice(i, end);
+    chunks.push(slice);
+    i = end;
+  }
+  return chunks;
 }
 
 export async function POST(req) {
@@ -115,11 +150,12 @@ export async function POST(req) {
 
       const fileId = uploadStream.id?.toString?.() || String(uploadStream.id);
       const materials = db.collection('materials');
+      const segmentsCol = db.collection('material_segments');
 
       const material_id = `mat_${randomUUID()}`;
       const nowIso = new Date().toISOString();
       const type = detectType(mime, filename);
-      const doc = {
+      const baseDoc = {
         material_id,
         id: material_id,
         setId: material_id,
@@ -132,7 +168,7 @@ export async function POST(req) {
         status: 'ready',
         createdAt: nowIso,
         uploader: 'docent',
-        segments: 1, // legacy compat: never 0
+        segments: 0,
         subject: subject || null,
         topic: topic || null,
         grade,
@@ -141,9 +177,30 @@ export async function POST(req) {
         created_at: nowIso,
         active: false,
       };
-      await materials.insertOne(doc);
 
-      const legacyMat = toLegacyMaterial(doc);
+      // Extract and store segments synchronously
+      let extracted = await extractTextFromBuffer(mime, buffer);
+      extracted = sanitizeText(extracted);
+      let segCount = 0;
+      if (extracted && extracted.length > 0) {
+        const chunks = chunkText(extracted, 1800).slice(0, 60); // hard cap ~108k chars
+        const docs = chunks.map((t) => ({
+          segment_id: `seg_${randomUUID()}`,
+          material_id,
+          text: t,
+          tokens: Math.max(10, Math.round(t.length / 4)),
+          created_at: nowIso,
+        }));
+        if (docs.length) {
+          await segmentsCol.insertMany(docs);
+          segCount = docs.length;
+        }
+      }
+
+      const finalDoc = { ...baseDoc, segments: Math.max(1, segCount) };
+      await materials.insertOne(finalDoc);
+
+      const legacyMat = toLegacyMaterial(finalDoc);
 
       const body = LEGACY
         ? {
@@ -155,11 +212,12 @@ export async function POST(req) {
         : {
             db_ok: true,
             file: { filename, mime, size: buffer.length },
-            material: doc,
+            material: finalDoc,
             storage: { driver: 'gridfs', file_id: fileId },
           };
 
-      return ok(body, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_and_ingested_v1' }));
+      const debug = segCount > 0 ? 'upload:stored_with_segments' : 'upload:stored_no_segments';
+      return ok(body, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': debug }));
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }
