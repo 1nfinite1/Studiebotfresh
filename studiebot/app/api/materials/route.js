@@ -36,6 +36,8 @@ function toUiItem(item) {
   return {
     id,
     setId,
+    kind: 'set',
+    ready: status === 'ready',
     filename,
     type,
     size,
@@ -83,10 +85,10 @@ export async function GET(req) {
       items = Array.isArray(raw) ? raw.map(toUiItem) : [];
 
       const count = items.length;
-      return ok({ db_ok, items, sets: items, count }, 200, new Headers({ 'X-Debug': 'materials:list_final_compat' }));
+      return ok({ db_ok, items, sets: items, count }, 200, new Headers({ 'X-Debug': 'materials:list_final_compat2' }));
     } catch {
       db_ok = false;
-      return ok({ db_ok, items: [], sets: [], count: 0 }, 200, new Headers({ 'X-Debug': 'materials:list_final_empty' }));
+      return ok({ db_ok, items: [], sets: [], count: 0 }, 200, new Headers({ 'X-Debug': 'materials:list_final_empty2' }));
     }
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials.', 'materials/list', { db_ok: false }, new Headers({ 'X-Debug': 'materials:server_error' }));

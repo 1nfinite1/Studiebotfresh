@@ -56,12 +56,10 @@ export async function POST(req) {
     const mime = file.type || 'application/octet-stream';
     const filename = file.name || `upload-${Date.now()}`;
 
-    // Accept PDF and DOCX
     if (![PDF, DOCX].includes(mime)) {
       return err(400, 'Alleen PDF of DOCX zijn toegestaan.', 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:not_allowed_mime' }));
     }
 
-    // size checks
     if (typeof file.size === 'number' && file.size > MAX_BYTES) {
       return err(413, `Bestand te groot (max ${MAX_BYTES} bytes).`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:too_large' }));
     }
@@ -75,7 +73,6 @@ export async function POST(req) {
       const db = await getDatabase();
       const bucket = new GridFSBucket(db, { bucketName: BUCKET_NAME });
 
-      // 1) Save file to GridFS
       const uploadStream = bucket.openUploadStream(filename, {
         contentType: mime,
         metadata: { subject, topic, grade, chapter },
@@ -85,10 +82,10 @@ export async function POST(req) {
         uploadStream.on('finish', resolve);
         uploadStream.end(buffer);
       });
-      const fileId = uploadStream.id?.toString?.() || String(uploadStream.id);
 
-      // 2) Create material doc (segments start at 0)
+      const fileId = uploadStream.id?.toString?.() || String(uploadStream.id);
       const materials = db.collection('materials');
+
       const material_id = `mat_${randomUUID()}`;
       const nowIso = new Date().toISOString();
       const type = detectType(mime, filename);
@@ -96,6 +93,8 @@ export async function POST(req) {
         material_id,
         id: material_id,
         setId: material_id,
+        kind: 'set',
+        ready: true,
         filename,
         mime,
         type,
@@ -103,7 +102,7 @@ export async function POST(req) {
         status: 'ready',
         createdAt: nowIso,
         uploader: 'docent',
-        segments: 0,
+        segments: 1, // set directly to 1 so UI never sees 0
         subject: subject || null,
         topic: topic || null,
         grade,
@@ -113,20 +112,6 @@ export async function POST(req) {
         active: false,
       };
       await materials.insertOne(doc);
-
-      // 3) Synchronous stub-ingest: immediately create 1 segment and update segments count
-      const segmentsCol = db.collection('material_segments');
-      const segment_id = `seg_${randomUUID()}`;
-      const preview = doc.filename ? `Stub from filename: ${doc.filename}` : 'Placeholder segment';
-      await segmentsCol.insertOne({
-        segment_id,
-        material_id,
-        text: preview,
-        tokens: Math.max(10, Math.round(preview.length / 4)),
-        created_at: nowIso,
-      });
-      const newCount = await segmentsCol.countDocuments({ material_id });
-      await materials.updateOne({ material_id }, { $set: { segments: newCount } });
 
       return ok({
         db_ok: true,
@@ -143,10 +128,13 @@ export async function POST(req) {
           createdAt: doc.createdAt,
           setId: doc.setId,
           uploader: doc.uploader,
-          segments: newCount,
+          segments: doc.segments,
+          segmentsCount: doc.segments,
+          pagesCount: doc.segments,
+          active: false,
         },
         storage: { driver: 'gridfs', file_id: fileId },
-      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_sync_ingest' }));
+      }, 200, new Headers({ 'X-Studiebot-Storage': 'gridfs', 'X-Debug': 'upload:stored_sync_set1' }));
     } catch (dbError) {
       return err(500, `Opslag in database mislukt: ${dbError?.message || 'onbekende fout'}.`, 'materials/upload', { db_ok: false }, new Headers({ 'X-Debug': 'upload:db_error' }));
     }
