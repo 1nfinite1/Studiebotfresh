@@ -1,93 +1,49 @@
 <analysis>
-Studiebot is een Next.js 14 applicatie met server-only API routes (app/api/llm/**) en een MongoDB-backend voor studiemateriaal. Het project is opnieuw opgestart om de prompts minimalistisch te houden en ChatGPT’s eigen sterkte (leren en overhoren) optimaal te benutten. FastAPI en overbodige features uit eerdere iteraties zijn niet langer relevant.
-De huidige focus: stabiele JSON-output, MongoDB-integratie, en het terugbrengen van de klassieke Oefentoets-flow (5 of 10 vragen in één keer, geen hulp, toetsrapport).
+The AI engineer's work on the Studiebot application has been highly iterative, addressing a series of build errors, UI crashes, and functionality gaps reported by the user. Initially, the focus was on fixing Preview, Delete, and LLM context integration, which involved patching , , and . Subsequent build failures revealed syntax issues and HTML entity errors in Javascript files. A major challenge was ensuring LLM context grounding, leading to the implementation of PDF/DOCX text extraction using  and , and later an OCR fallback via . The project then pivoted to a large-scale prompt unification, defining detailed LLM behaviors for Learn, Quiz, and Exam modes, including specific JSON contracts for the Exam grading and the restoration of a legacy Exam UI. Most recently, the Hints feature was entirely removed, and the Overhoren mode was rewired to use a dedicated quiz endpoint. The current state is a critical UI crash, resulting in a blank page, which is attributed to an incorrect  component return and a Tailwind CSS typo.
 </analysis>
 <product_requirements>
-Core learning modes: Learn, Quiz, Exam (Oefentoets).
-
-Always Dutch for student text, JSON keys in English.
-
-Minimal prompts; adaptiviteit en Bloom-taxonomie in code (niet in de prompt).
-
-MongoDB integration: gebruik van summary en glossary uit studiemateriaal. Fallback bij missende data.
-
-Guardrails: unsafe/injection → vaste lijn: “Dat hoort niet bij de les. Laten we verdergaan.”
-
-Oefentoets:
-
-5 of 10 vragen in één keer genereren.
-
-Geen hints/defs.
-
-Student maakt de toets zonder hulp.
-
-Rapport met score, grade, 3 focuspunten, per-item uitleg, en een chat_prefill waarmee Overhoren start op zwakke punten.
-New features include:
-1.  **Glossary**: Extract terms/definitions (backend ), frontend highlighting with click-to-define popovers.
-2.  **Hint Button**: Display a ? button on assistant question messages to reveal hints.
-3.  **Emoji Modes**: Frontend toggle (NONE/SOMETIMES/MANY) persisting mode, passing  header to backend.
-4.  **LLM on Vercel via Server-only Next.js Routes**: Implement LLM functionality directly within  using server-only Next.js API routes () and an adapter (). Secrets must remain server-side. Scanner rules were updated to enforce this.
-5.  **Finalize LLM Behavior**: Implement Learn, Quiz, and Practice Exam modes with Bloom taxonomy (remember, understand, apply), adaptive learning, and strict guardrails (moderation, relevance, prompt injection). All student-visible text must be in Dutch, JSON keys in English. Implement structured exam reports.
-6.  **MongoDB Hookup**: Re-enable MongoDB integration for study materials, allowing LLM routes to use material summaries and glossaries for context. Includes a health check endpoint and graceful fallback if materials are missing.
+The Studiebot application aims to provide Dutch-language learning modes (Learn, Quiz, Exam) for 12-16 year olds, using LLMs with Bloom taxonomy, adaptive learning, and guardrails. Study materials are stored in MongoDB, with fallback for missing data.
+Key features and requirements addressed or modified throughout the trajectory:
+1.  **Build Stability**: Fix JSX syntax errors, remove stray  statements, and introduce a  flag. Resolve HTML entity issues breaking Vercel builds.
+2.  **Preview Functionality**:  must consistently return , with fallbacks to segments text, GridFS sample, or stub.
+3.  **Delete Functionality**: Support  and , performing cascade deletes (materials, segments, GridFS). Must return  on success.
+4.  **LLM Context Integration**:  must inject  into all LLM routes (, , , , ). If no active material, return . Responses must reference active material.
+5.  **Text Extraction & OCR**: Implement PDF/DOCX text extraction (using , ) on upload/ingest to populate . Add an OCR fallback layer (e.g., ) behind feature flags (, , ) for scanned PDFs.
+6.  **LLM Prompt Unification**: Standardize system prompts across Learn, Quiz, and Exam modes to be warm, motivating, Dutch-only, with 2-4 emojis, short feedback, and strict JSON for Exam grading.
+7.  **Learn Mode ()**: Guide with tiny activation prompts. One small, concrete activation question per turn. Brief, friendly feedback with emojis, then one new follow-up question. No hint overlay.
+8.  **Quiz Mode ()**: Quiz on active material. One question per turn, varying types and adapting difficulty. Encouraging feedback with emojis, correct answer if needed, then one new question. Must use dedicated quiz route.
+9.  **Exam Mode ()**:
+    *   **Generate**: Produce a full practice exam (default 5, allow 10) in one response, numbered questions, mixed types (short-open, MC, explain). No answers. Legacy UI flow (all questions at once, white text boxes).
+    *   **Submit/Grade**: Return strict legacy JSON with score,  (question, studentAnswer, status, emoji, explanation, modelAnswer). Emoji mapping: ✅, ❌, 🤔. UI renders a white Toetsrapport for results only. Stateless grading (request includes  text).
+10. **UI/UX Refinements**: Hints removed entirely. Glossary terms appear bold deep purple, no asterisks, with popover definitions. Ensure consistent UI styling.
+11. **Diagnostics**: All LLM routes to include debug headers: , , , , .
 </product_requirements>
 <key_technical_concepts>
-Next.js 14 server-only API routes voor LLM interactie.
-
-Minimal prompts, contract enforcement en adaptiviteit (Bloom/difficulty) in server logic.
-
-MongoDB als bron voor studiemateriaal (Node runtime).
-
-Guardrails: moderatie en injection-detectie, met vaste fallback-output.
-
-Always JSON: responses bevatten altijd { ok:true/false } en optioneel error.
-
-Exam flow: batch-generatie + grading in één keer, rapport met Overhoren-koppeling.
+- Next.js 14 (app router, server-only API routes)
+- FastAPI (Python backend)
+- MongoDB with GridFS (for materials storage)
+- LLM integration (OpenAI, potentially Anthropic/Google via Emergent LLM Key)
+-  &  (for PDF/DOCX text extraction)
+-  (for OCR fallback)
+- Consistent JSON API contract with  for all responses
 </key_technical_concepts>
 <code_architecture>
-The application has a monorepo structure with a Next.js frontend () and a FastAPI backend ().
-
-
-
--   ****: Renamed from  to fix circular import, defines FastAPI .
--   ****: New entry point to correctly start FastAPI app via  for supervisor.
--   ****: Main UI component, extensively modified to integrate , , , , and updated LLM client calls.
--   ****: CI script, updated to allow LLM SDK imports only in  and  paths, and checks for .
--   ****: Placeholder file to ensure the empty  directory is tracked by Git for Vercel builds.
--   ** routes**: New Next.js server-only API routes (e.g., , , , , ) handling LLM calls, ensuring POST methods,  runtime, and proper headers/JSON responses, including detailed error handling.
--   ****: New server-only adapter for OpenAI LLM interactions, implementing moderation, relevance, prompt injection guardrails, Bloom taxonomy logic, and adaptive learning, with extensive error handling.
--   ****: New client-side utility for the UI to call the Next.js API routes securely.
--   ****: LLM provider factory, updated to return either  or the  based on .
--   ****: New components (, , ) for glossary highlighting and click-to-define popovers.
--   ****: New component for displaying contextual hints.
--   ** & **: New components for managing and toggling emoji display modes.
--   ****: New singleton MongoDB client with enhanced connection error handling.
--   ****: New service for fetching study materials from MongoDB, including graceful error handling.
--   ** & **: New diagnostic API routes for database health and materials access.
+Next.js app voor frontend, FastAPI backend, MongoDB/GridFS voor materiaalopslag, gescheiden routes per modus (learn, quiz, exam). Prompts gecentraliseerd in infra/llm/prompts
 </code_architecture>
 <pending_tasks>
-Oplossen van de “Unexpected end of JSON input” error door te garanderen dat alle routes altijd geldige JSON terugsturen.
-
-Controleren dat MongoDB-queries werken in Preview en gebruikt worden in LLM context.
-
-Exam (Oefentoets) terugbrengen naar oude format (batch-generatie, rapport, Overhoren-CTA).
+- **Hotfix for Blank Page**: The application is currently crashing, resulting in a completely empty page. The immediate task is to fix  by restoring  to return valid JSX and correcting a Tailwind class typo ( to ).
 </pending_tasks>
 <current_work>
-The AI engineer is currently addressing a critical bug reported by the user: Failed to execute json on Response: Unexpected end of JSON input in the preview build (branch ). This error indicates that an LLM API route is returning an empty or non-JSON response when JSON is expected, likely due to unhandled exceptions.
+Immediately prior to this summary, the AI engineer had implemented a significant set of changes related to LLM interaction and UI.
+1.  **Hints Feature Removal**: The Hints feature was entirely decommissioned from the UI, API, and LLM prompts.  now returns a 410 Gone status.
+2.  **Overhoren (Quiz) Rerouting**: The Overhoren mode was rewired to exclusively use the  endpoint for question generation, moving away from a shared learn logic.
+3.  **Leren (Learn) Endpoint**: A new  endpoint was introduced for the Leren mode, providing a compact, single-message response without hint overlays.
+4.  **Oefentoets (Exam) State**: The Oefentoets endpoints ( and ) and their legacy UI flow (generate all questions, then show white Toetsrapport for results only) remained as previously updated.
+5.  **Prompt Updates**: All LLM prompts were fully de-hinted and adjusted to the specified tone, emoji usage, and question/feedback structure.
+6.  **Code Cleanup**: Related code paths and test files for the hints feature were removed.
 
-- Minimal prompts zijn geïmplementeerd (NL output, Engels keys).
-
-Guardrails werken, relevance is versoepeld.
-
-MongoDB is verbonden maar routes geven soms nog lege/non-JSON responses.
-
-Team werkt nu aan debuggen van foutpaden om altijd JSON terug te sturen, inclusief duidelijke foutmeldingen en ok:false.
+The last action performed was a detailed summary of these changes and verification steps. However, the user then reported a critical error: The page is now fully empty. The AI engineer suspects this is a runtime crash in React, possibly due to  in  returning  and a Tailwind class typo.
 </current_work>
 <optional_next_step>
-Na stabiliteit en Mongo-integratie:
-
-Volledige implementatie van adaptiviteit (Bloom’s Taxonomy & Active Recall) in Learn/Quiz.
-
-Uitbreiden van Exam (Oefentoets) grading met duidelijke rapportage en automatische Overhoren-samenvatting.
-
-Op langere termijn: uitbreiding Glossary-highlighting en extra UI-features (optioneel).
+Implement a hotfix for  to resolve the blank page error.
 </optional_next_step>
