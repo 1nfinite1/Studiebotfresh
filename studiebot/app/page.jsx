@@ -133,25 +133,25 @@ function HeaderConfig({ guidance, setGuidance, isTeacher, setIsTeacher }) {
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="mt-4 flex items-center justify-between rounded-md bg-purple-50 p-3">
-            <label htmlFor="is-teacher" className="text-sm font-semibold text-purple-700">Ik ben docent/beheerder</label>
-            <input id="is-teacher" type="checkbox" checked={isTeacher} onChange={(e) => setIsTeacher(e.target.checked)} />
-          </div>
+            <div className="mt-4 flex items-center justify-between rounded-md bg-purple-50 p-3">
+              <label htmlFor="is-teacher" className="text-sm font-semibold text-purple-700">Ik ben docent/beheerder</label>
+              <input id="is-teacher" type="checkbox" checked={isTeacher} onChange={(e) => setIsTeacher(e.target.checked)} />
+            </div>
 
-          <div className="mt-2 flex items-center justify-between rounded-md bg-purple-50 p-3">
-            <EmojiModeToggle />
-          </div>
+            <div className="mt-2 flex items-center justify-between rounded-md bg-purple-50 p-3">
+              <EmojiModeToggle />
+            </div>
 
-          {isTeacher && <MaterialsAdmin />}
+            {isTeacher && <MaterialsAdmin />}
 
-          <div className="mt-3 flex justify-end gap-2">
-            <button onClick={() => setGuidance(defaultGuidance)} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Reset naar standaard</button>
-            <button onClick={() => setOpen(false)} className="rounded-md bg-purple-600 px-3 py-1 text-sm font-semibold text-white hover:bg-purple-700">Sluiten</button>
+            <div className="mt-3 flex justify-end gap-2">
+              <button onClick={() => setGuidance(defaultGuidance)} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Reset naar standaard</button>
+              <button onClick={() => setOpen(false)} className="rounded-md bg-purple-600 px-3 py-1 text-sm font-semibold text-white hover:bg-purple-700">Sluiten</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -173,7 +173,6 @@ function MaterialsAdmin() {
       const url = `/api/materials/list?vak=${encodeURIComponent(vak)}&leerjaar=${encodeURIComponent(leerjaar)}&hoofdstuk=${encodeURIComponent(hoofdstuk)}`
       const res = await apiFetch(url)
       const data = await res.json()
-      // Instrumentation
       console.log('[materials:list] raw response', data)
       const list = data?.items || data?.sets || data?.data?.items || []
       console.log('[materials:list] using items length:', list.length)
@@ -207,7 +206,6 @@ function MaterialsAdmin() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      // Send both legacy and new field names just in case
       fd.append('vak', vak)
       fd.append('leerjaar', leerjaar)
       fd.append('hoofdstuk', hoofdstuk)
@@ -218,32 +216,24 @@ function MaterialsAdmin() {
       const res = await apiFetch('/api/materials/upload', { method: 'POST', body: fd })
       const data = await res.json()
       console.log('[materials:upload] raw response', data)
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Upload mislukt')
+      if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Upload mislukt')
       const m = data?.material || data?.data?.item || {}
       const segCount = m.segmentsCount ?? m.pagesCount ?? m.segments ?? data?.data?.segmentCount ?? 0
-      console.log('[materials:upload] computed segCount from', {
-        segments: m.segments,
-        segmentsCount: m.segmentsCount,
-        pagesCount: m.pagesCount,
-        fallback: data?.data?.segmentCount,
-      })
+      console.log('[materials:upload] computed segCount from', { segments: m.segments, segmentsCount: m.segmentsCount, pagesCount: m.pagesCount, fallback: data?.data?.segmentCount })
       setMsg(`Gereed: ${segCount} segmenten`)
       await refresh()
-    } catch (e) {
-      setMsg(e.message)
-    } finally { setUploading(false); try { e.target.value = '' } catch {} }
+    } catch (e) { setMsg(e.message) } finally { setUploading(false); try { e.target.value = '' } catch {} }
   }
 
   const onActivate = async () => {
     try {
-      // Pick first item as target if none selected (instrumentation-friendly)
       const target = items[0]
       console.log('[materials:activate] using target', target?.id)
       const body = target?.id ? { material_id: target.id } : { vak, leerjaar, hoofdstuk }
       const res = await apiFetch('/api/materials/activate', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       console.log('[materials:activate] raw response', data)
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || data?.message || 'Activeren mislukt')
+      if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Activeren mislukt')
       setMsg('Actief gemaakt')
       await refresh()
     } catch (e) { setMsg(e.message) }
@@ -254,17 +244,19 @@ function MaterialsAdmin() {
     try {
       const res = await apiFetch(`/api/materials/item?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Verwijderen mislukt')
+      console.log('[materials:delete] raw response', data)
+      if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Verwijderen mislukt')
       await refresh()
     } catch (e) { setMsg(e.message) }
   }
 
   const onPreview = async (id) => {
     try {
-      const res = await apiFetch(`/api/materials/preview?id=${encodeURIComponent(id)}`)
+      const res = await apiFetch(`/api/materials/preview?material_id=${encodeURIComponent(id)}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Preview mislukt')
-      const text = Array.isArray(data?.data?.segments) ? data.data.segments.join('\n\n') : data?.data?.preview || ''
+      console.log('[materials:preview] raw response', data)
+      if (!res.ok || data?.ok === false) throw new Error(data?.message || data?.error || 'Preview mislukt')
+      const text = Array.isArray(data?.data?.segments) ? data.data.segments.join('\n\n') : data?.data?.preview || data?.preview?.textSnippet || ''
       alert((text || 'Geen preview beschikbaar').slice(0, 1200))
     } catch (e) { alert(e.message) }
   }
@@ -367,39 +359,6 @@ function ChatPanel({ mode, context }) {
     return () => { if (t) clearTimeout(t) }
   }, [loading])
 
-  const renderMessage = (text, hint = null) => {
-    const lines = String(text || '').split(/\n\n+/)
-    return (
-      <div className="space-y-2">
-        {lines.map((block, i) => {
-          const bulletLines = block.split(/\n/).filter(Boolean)
-          const isList = bulletLines.every(l => l.trim().startsWith('- '))
-          if (isList) {
-            return (
-              <ul key={i} className="list-disc pl-6 space-y-1">
-                {bulletLines.map((l, j) => {
-                  const itemText = l.replace(/^\s*-\s*/, '')
-                  return (
-                    <li key={j}>
-                      <ProcessedText>{itemText}</ProcessedText>
-                    </li>
-                  )
-                })}
-              </ul>
-            )
-          }
-          const withBold = block.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/_(.*?)_/g, '<em>$1</em>')
-          return (
-            <p key={i}>
-              <ProcessedText>{withBold.replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<em>/g, '_').replace(/<\/em>/g, '_')}</ProcessedText>
-            </p>
-          )
-        })}
-        {shouldShowHint(text, hint) && <HintBubble hint={hint} />}
-      </div>
-    )
-  }
-
   const send = async () => {
     if (!input.trim()) return
     const next = [...messages, { role: 'user', content: input }]
@@ -407,9 +366,10 @@ function ChatPanel({ mode, context }) {
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      const { hints, notice, hint } = await llm.generateHints({ topicId, text: input })
-      const content = [notice ? `(${notice})` : null, ...(hints || [])].filter(Boolean).map((h) => `- ${h}`).join('\n')
-      setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: hint || null }])
+      const payload = { topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk }
+      const { tutor_message, hints, follow_up_question, notice } = await llm.generateHints(payload)
+      const content = [notice ? `(${notice})` : null, tutor_message, ...(hints || []), follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
+      setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
@@ -424,7 +384,7 @@ function ChatPanel({ mode, context }) {
           <div key={idx} className={`max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
             <div className="max-w-[70ch] whitespace-pre-wrap">
               {m.role === 'assistant' ? (
-                renderMessage(m.content, m.hint)
+                renderMessage(m.content)
               ) : (
                 <ProcessedText>{m.content}</ProcessedText>
               )}
@@ -519,7 +479,7 @@ function OefentoetsPanel({ context, onSwitchToOverhoren }) {
     try {
       const llm = getLLMClient()
       const answerArray = questions.map(q => answers[q.id] || '')
-      const result = await llm.gradeQuiz({ answers: answerArray })
+      const result = await llm.gradeQuiz({ answers: answerArray, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
       setScore(result.score || 0)
       setFeedback(result.feedback || [])
       setSubmitted(true)

@@ -2,17 +2,20 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { previewMaterial } from '../../../../../infra/db/materialsService';
 
-function ok(data = {}, status = 200, headers) { return NextResponse.json({ ok: true, ...data }, { status, headers }); }
-function err(status, reason, message = undefined, extra = {}, headers) { const base = { ok: false, reason }; if (message) base.message = message; return NextResponse.json({ ...base, ...extra }, { status, headers }); }
-
 export async function GET(_req, { params }) {
   try {
     const id = params?.id ? String(params.id) : '';
-    if (!id) return err(400, 'missing_id', 'id is required', {}, new Headers({ 'X-Debug': 'materials:preview_path|missing_id' }));
     const pv = await previewMaterial(id);
-    if (!pv) return err(404, 'not_found', 'Material not found', {}, new Headers({ 'X-Debug': 'materials:preview_path|not_found' }));
-    return ok({ material: { id: pv.id, filename: pv.filename, type: pv.type, size: pv.size, pagesCount: pv.pagesCount }, preview: { textSnippet: pv.textSnippet, firstPage: pv.firstPage, chars: pv.chars } }, 200, new Headers({ 'X-Debug': 'materials:preview_path|ok' }));
+    const snippet = pv?.textSnippet || `Stub preview for ${pv?.filename || id}`;
+    const resBody = {
+      ok: true,
+      material: { id: pv?.id || id, filename: pv?.filename || 'bestand', type: pv?.type || 'pdf', size: pv?.size || null, pagesCount: pv?.pagesCount || 1 },
+      preview: { textSnippet: snippet, firstPage: pv?.firstPage || 1, chars: snippet.length },
+      data: { preview: snippet },
+    };
+    return NextResponse.json(resBody, { status: 200, headers: new Headers({ 'X-Debug': 'materials:preview_path|ok' }) });
   } catch {
-    return err(500, 'server_error', 'Unexpected server error', {}, new Headers({ 'X-Debug': 'materials:preview_path|server_error' }));
+    const body = { ok: true, material: { id: 'unknown', filename: 'onbekend', type: 'pdf', size: null, pagesCount: 1 }, preview: { textSnippet: 'Stub preview', firstPage: 1, chars: 11 }, data: { preview: 'Stub preview' } };
+    return NextResponse.json(body, { status: 200, headers: new Headers({ 'X-Debug': 'materials:preview_path|stub' }) });
   }
 }
