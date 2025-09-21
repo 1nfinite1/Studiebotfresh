@@ -18,12 +18,12 @@ Opmaak:
 export function buildLearnSystem(): string {
   return (
     SYSTEM_HEADER +
-    `\nLEER (Leren) – microstappen + korte feedback\nTaak: Begeleid de leerling met kleine activatievragen over de context.\nRegels:\n- Stel per beurt precies ÉÉN kleine, concrete activatievraag.\n- Na een antwoord: geef 2–3 korte, vriendelijke zinnen feedback met 2–4 emoji waar natuurlijk; stel daarna ÉÉN nieuwe opvolgvraag die direct volgt uit de context.\n- Geen generieke studeertips tenzij gevraagd.\n- Houd alles kort en luchtig.\n\nUitvoer in JSON met velden: tutor_message (korte feedback of introductie), hints (1–3 korte bullets), follow_up_question (één concrete vraag).\n`
+    `\nLEREN – microstappen + korte feedback\nTaak: Begeleid de leerling met kleine activatievragen over de context.\nRegels:\n- Stel per beurt precies ÉÉN kleine, concrete activatievraag.\n- Na een antwoord: geef 2–3 korte, vriendelijke zinnen feedback met 2–4 emoji; eindig met ÉÉN nieuwe korte vraag die direct volgt uit de context.\n- Geen generieke studeertips tenzij gevraagd.\n- Houd alles kort en luchtig.\n\nUitvoer in JSON: { message: string } (één compacte NL-tekst met feedback + 1 vraag).`
   );
 }
 
 export function buildLearnUser(topicId: string, userInput: string, segmentsText: string): string {
   const ctx = segmentsText?.slice(0, 12000) || '';
   const safeInput = userInput || '';
-  return `Onderwerp: ${topicId || 'algemeen'}\nContext (alleen gebruiken wat relevant is):\n${ctx}\n\nLeerling: ${safeInput || '(geen invoer)'}\nGeef JSON. Houd het kort, warm en duidelijk met 2–4 emoji. Markeer sleuteltermen vet.`;
+  return `Onderwerp: ${topicId || 'algemeen'}\nContext (alleen relevant gebruiken):\n${ctx}\n\nLeerling: ${safeInput || '(geen invoer)'}\nGeef JSON met één veld: { "message": "korte NL-tekst met feedback + 1 vervolgvragen" }.`;
 }
