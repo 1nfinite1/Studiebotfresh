@@ -43,6 +43,8 @@ function toUiItem(item) {
     createdAt,
     uploader,
     segments,
+    segmentsCount: segments,
+    pagesCount: segments, // legacy-friendly
     active,
     material_id,
     storage: item.storage || null,
@@ -57,39 +59,6 @@ function parseNum(value) {
   if (value == null) return undefined;
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
-}
-
-async function ensureSegments(db, item) {
-  try {
-    const materials = db.collection('materials');
-    const segmentsCol = db.collection('material_segments');
-    const material_id = item.material_id || item.id || item.setId;
-    if (!material_id) return item;
-
-    const seg = Number(item.segments || 0);
-    if (Number.isFinite(seg) && seg >= 1) return item;
-
-    // Check if there are segments already
-    const existing = await segmentsCol.countDocuments({ material_id });
-    if (existing >= 1) {
-      await materials.updateOne({ material_id }, { $set: { segments: existing } });
-      return { ...item, segments: existing };
-    }
-
-    // Create a stub segment on the fly to unblock UI
-    const preview = item.filename ? `Stub from filename: ${item.filename}` : 'Placeholder segment';
-    await segmentsCol.insertOne({
-      segment_id: `seg_${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`,
-      material_id,
-      text: preview,
-      tokens: Math.max(10, Math.round(preview.length / 4)),
-      created_at: new Date().toISOString(),
-    });
-    await materials.updateOne({ material_id }, { $set: { segments: 1 } });
-    return { ...item, segments: 1 };
-  } catch {
-    return item; // fail-safe
-  }
 }
 
 export async function GET(req) {
@@ -115,20 +84,16 @@ export async function GET(req) {
       if (topic) selector.$and = (selector.$and || []).concat([{ $or: [ { topic }, { topic: null }, { topic: { $exists: false } } ] }]);
 
       const raw = await materials.find(selector.$and ? selector : {}, { projection: { _id: 0 } }).sort({ created_at: -1 }).limit(200).toArray();
-      const normalized = Array.isArray(raw) ? raw.map(toUiItem) : [];
+      items = Array.isArray(raw) ? raw.map(toUiItem) : [];
 
-      // Ensure every item reports at least 1 segment by creating a stub when needed
-      const ensured = [];
-      for (const it of normalized) {
-        ensured.push(await ensureSegments(db, it));
-      }
-      items = ensured;
+      // Legacy compatibility: also provide `sets` and `count`
+      const count = items.length;
+      return ok({ db_ok, items, sets: items, count }, 200, new Headers({ 'X-Debug': 'materials:list_alias_final_compat' }));
     } catch {
       db_ok = false;
-      items = [];
+      const count = 0;
+      return ok({ db_ok, items: [], sets: [], count }, 200, new Headers({ 'X-Debug': 'materials:list_alias_final_empty' }));
     }
-
-    return ok({ db_ok, items }, 200, new Headers({ 'X-Debug': 'materials:list_alias_final' }));
   } catch (e) {
     return err(500, 'Onverwachte serverfout bij materials alias.', 'materials/list_alias', { db_ok: false }, new Headers({ 'X-Debug': 'materials:list_alias_error' }));
   }
