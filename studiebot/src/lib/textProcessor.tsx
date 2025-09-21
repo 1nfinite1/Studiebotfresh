@@ -22,8 +22,11 @@ export function ProcessedText({ children: text, className = '' }: ProcessedTextP
   // Step 1: Filter emojis based on mode
   const emojiFiltered = filterEmojis(text)
 
+  // Step 1b: Strip markdown bold markers **...** so we can style via glossary highlighter
+  const stripped = emojiFiltered.replace(/\*\*(.*?)\*\*/g, '$1')
+  
   // Step 2: Highlight glossary terms
-  const segments = highlightTerms(emojiFiltered)
+  const segments = highlightTerms(stripped)
 
   return (
     <span className={className}>
