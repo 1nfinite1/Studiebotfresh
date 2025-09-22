@@ -527,29 +527,93 @@ function OefentoetsPanel({ context }) {
   if (phase === 'report' && report) {
     const s = report.score || { percentage: 0, correct: 0, partial: 0, wrong: 0, total: 0 }
     return (
-      <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white p-6 ring-1 ring-white/20 text-purple-900">
-        <h3 className="mb-2 text-2xl font-extrabold">Toetsrapport</h3>
-        <p className="mb-1 text-sm text-purple-700">Score: <span className="font-bold">{s.percentage}%</span> • Goed: {s.correct} • Gedeeltelijk: {s.partial} • Fout: {s.wrong} • Totaal: {s.total}</p>
-        {report.summary && <p className="mb-4 text-sm">{report.summary}</p>}
-        <div className="divide-y divide-purple-100 border-t border-b">
+      <div className="mx-auto mt-2 w-full max-w-3xl space-y-4">
+        {/* Toetsrapport Header */}
+        <div className="rounded-2xl bg-white p-6 text-purple-900 shadow-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl">📊</span>
+            <h3 className="text-2xl font-bold">Toetsrapport</h3>
+          </div>
+          
+          {/* Score Summary */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📊</span>
+              <span className="font-semibold">Score: {s.correct}/{s.total} ({s.percentage}%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              <span className="font-semibold">Cijfer: {(s.percentage / 10).toFixed(1)}</span>
+            </div>
+          </div>
+          
+          {/* Overall Feedback */}
+          <div className="rounded-lg bg-purple-50 p-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-green-600">✅</span>
+              <span className="font-semibold text-purple-800">
+                Ingeleverd! Je score: {s.correct}/{s.total} ({s.percentage}%). Cijfer: {(s.percentage / 10).toFixed(1)}.
+              </span>
+            </div>
+            <p className="text-purple-700">
+              Je hebt {s.correct} van de {s.total} vragen goed beantwoord. Goed werk!
+            </p>
+          </div>
+          
+          {/* General Feedback */}
+          {report.summary && (
+            <div className="text-purple-700">
+              <p className="font-semibold mb-2">Aanbevelingen:</p>
+              <p className="text-sm">{report.summary}</p>
+            </div>
+          )}
+          
+          {/* Call to Action */}
+          <div className="mt-4 text-center">
+            <p className="text-purple-600 font-medium">Oefen nu met Overhoren op je fouten</p>
+            <div className="mt-2 text-yellow-600">
+              💡 Je hebt {s.correct} van de {s.total} vragen goed beantwoord. Goed werk!
+            </div>
+          </div>
+        </div>
+        
+        {/* Question Details */}
+        <div className="space-y-3">
           {Array.isArray(report.feedback) && report.feedback.map((fb, i) => (
-            <details key={i} className="group py-3">
-              <summary className="flex cursor-pointer list-none items-center justify-between">
-                <span className="flex items-center gap-2 font-semibold"><span>{fb.emoji || '❔'}</span><span>Vraag {i + 1}</span></span>
-                <span className="text-sm text-purple-500 group-open:hidden">Open</span>
-                <span className="text-sm text-purple-500 hidden group-open:inline">Sluit</span>
+            <details key={i} className="group rounded-xl bg-white shadow-md">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-4 hover:bg-purple-50 rounded-xl">
+                <span className="flex items-center gap-3 font-semibold text-purple-900">
+                  <span className="text-lg">{fb.emoji || '❔'}</span>
+                  <span>Vraag {i + 1}</span>
+                </span>
+                <svg className="w-5 h-5 text-purple-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </summary>
-              <div className="mt-2 space-y-2 text-sm">
-                <p><span className="font-semibold">Vraag:</span> {fb.question}</p>
+              <div className="px-4 pb-4 space-y-3 text-sm text-purple-800">
+                <div className="border-t border-purple-100 pt-3">
+                  <p><span className="font-semibold">Vraag:</span> {fb.question}</p>
+                </div>
                 <p><span className="font-semibold">Jouw antwoord:</span> {fb.studentAnswer || '(leeg)'}</p>
-                <p><span className="font-semibold">Uitleg:</span> {fb.explanation}</p>
-                <p><span className="font-semibold">Modelantwoord:</span> {fb.modelAnswer}</p>
+                <div className="rounded-lg bg-orange-50 p-3">
+                  <p><span className="font-semibold text-orange-800">⭐ Uitleg:</span> <span className="text-orange-700">{fb.explanation}</span></p>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-3">
+                  <p><span className="font-semibold text-blue-800">⭐ Modelantwoord:</span> <span className="text-blue-700">{fb.modelAnswer}</span></p>
+                </div>
               </div>
             </details>
           ))}
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={() => { setPhase('choose'); setItems([]); setAnswers({}); setReport(null) }} className="rounded-md bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700 hover:bg-purple-200">Nieuwe toets</button>
+        
+        {/* Action Button */}
+        <div className="flex justify-center pt-2">
+          <button 
+            onClick={() => { setPhase('choose'); setItems([]); setAnswers({}); setReport(null) }} 
+            className="rounded-xl bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-700 transition-colors"
+          >
+            Nieuwe toets
+          </button>
         </div>
       </div>
     )
