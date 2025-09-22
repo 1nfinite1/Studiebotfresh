@@ -28,12 +28,17 @@ def _bool_env(name: str, default: bool = False) -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _load_yaml_prompt(filename: str) -> str:
+def _load_yaml_prompt(filename: str, context: str = "") -> str:
     base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "prompts"))
     path = os.path.join(base, filename)
     try:
         with open(path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            content = f.read()
+            # Simple template substitution
+            content = content.replace("{{context}}", context)
+            data = yaml.safe_load(content)
+            if isinstance(data, dict) and "system" in data:
+                return data["system"]
             if isinstance(data, str):
                 return data
             return json.dumps(data)
