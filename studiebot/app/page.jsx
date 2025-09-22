@@ -545,12 +545,21 @@ function OefentoetsPanel({ context }) {
 
   if (phase === 'report' && report) {
     const s = report.score || { percentage: 0, correct: 0, partial: 0, wrong: 0, total: 0 }
+    
+    // Dynamic qualification sentence based on percentage
+    const getQualificationText = (percentage) => {
+      if (percentage >= 90) return "Uitstekend resultaat — je beheerst dit onderwerp bijna volledig!"
+      if (percentage >= 70) return "Sterk gedaan — nog wat puntjes om te verfijnen."
+      if (percentage >= 40) return "Goed op weg, met nog ruimte voor groei."
+      return "Er is nog veel te winnen — dit is een mooi startpunt!"
+    }
+    
     return (
       <div className="mx-auto mt-2 w-full max-w-3xl space-y-4">
         {/* Toetsrapport Header */}
         <div className="rounded-2xl bg-white p-6 text-purple-900 shadow-lg">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl">📊</span>
+            <span className="text-2xl">🎓</span>
             <h3 className="text-2xl font-bold">Toetsrapport</h3>
           </div>
           
@@ -563,6 +572,29 @@ function OefentoetsPanel({ context }) {
             <div className="flex items-center gap-2">
               <span className="text-lg">🎯</span>
               <span className="font-semibold">Cijfer: {(s.percentage / 10).toFixed(1)}</span>
+            </div>
+          </div>
+          
+          {/* Dynamic Qualification */}
+          <div className="mb-4">
+            <p className="text-purple-700 font-medium">{getQualificationText(s.percentage)}</p>
+          </div>
+          
+          {/* Simple Recommendations */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-start gap-2">
+              <span>✨</span>
+              <div>
+                <span className="font-semibold text-purple-800">Sterk:</span>
+                <span className="text-purple-700 ml-1">Je antwoorden zijn vaak duidelijk en op de juiste lijn.</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span>📌</span>
+              <div>
+                <span className="font-semibold text-purple-800">Verbeterpunt:</span>
+                <span className="text-purple-700 ml-1">Probeer de begrippen expliciet te noemen.</span>
+              </div>
             </div>
           </div>
           
@@ -586,14 +618,6 @@ function OefentoetsPanel({ context }) {
               <p className="text-sm">{report.summary}</p>
             </div>
           )}
-          
-          {/* Call to Action */}
-          <div className="mt-4 text-center">
-            <p className="text-purple-600 font-medium">Oefen nu met Overhoren op je fouten</p>
-            <div className="mt-2 text-yellow-600">
-              💡 Je hebt {s.correct} van de {s.total} vragen goed beantwoord. Goed werk!
-            </div>
-          </div>
         </div>
         
         {/* Question Details */}
