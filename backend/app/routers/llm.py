@@ -94,10 +94,10 @@ async def _openai_generate_hints(topic_id: str, text: str, previous_answer: str 
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     model = os.environ.get("OPENAI_MODEL_HINTS", "gpt-4o-mini")
-    system = _load_yaml_prompt("generate_hints.yaml")
     
     # Build context-aware user prompt
-    user_prompt = _build_context_prompt(topic_id, text, previous_answer, mode)
+    context = _build_context_prompt(topic_id, text, previous_answer, mode)
+    system = _load_yaml_prompt("generate_hints.yaml", context)
 
     for attempt, delay in enumerate([0.0, 0.25, 0.8]):
         try:
@@ -109,7 +109,7 @@ async def _openai_generate_hints(topic_id: str, text: str, previous_answer: str 
                         model=model,
                         input=[
                             {"role": "system", "content": system},
-                            {"role": "user", "content": user_prompt},
+                            {"role": "user", "content": "Genereer de response volgens het JSON formaat."},
                         ],
                         response_format={"type": "json_object"},
                     )
@@ -124,7 +124,7 @@ async def _openai_generate_hints(topic_id: str, text: str, previous_answer: str 
                         model=model,
                         messages=[
                             {"role": "system", "content": system},
-                            {"role": "user", "content": user_prompt},
+                            {"role": "user", "content": "Genereer de response volgens het JSON formaat."},
                         ],
                         response_format={"type": "json_object"},
                         max_tokens=1500,  # Increased from 1000
