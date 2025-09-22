@@ -12,6 +12,10 @@ class GenerateHintsOut(BaseModel):
     notice: Optional[str] = None
     # Extended to optionally carry a single hint for quiz generation flows
     hint: Optional[str] = None
+    # Main tutor message content
+    tutor_message: Optional[str] = None
+    # Follow-up question
+    follow_up_question: Optional[str] = None
 
 
 class GradeQuizIn(BaseModel):
