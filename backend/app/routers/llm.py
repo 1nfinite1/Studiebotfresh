@@ -84,25 +84,27 @@ async def _moderation_flagged(text: str) -> bool:
         return False
 
 
-async def _openai_generate_hints(topic_id: str, text: str) -> Dict:
+async def _openai_generate_hints(topic_id: str, text: str, previous_answer: str = None, mode: str = "leren") -> Dict:
     from openai import OpenAI
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     model = os.environ.get("OPENAI_MODEL_HINTS", "gpt-4o-mini")
     system = _load_yaml_prompt("generate_hints.yaml")
-    user = json.dumps({"topicId": topic_id, "text": text}, ensure_ascii=False)
+    
+    # Build context-aware user prompt
+    user_prompt = _build_context_prompt(topic_id, text, previous_answer, mode)
 
     for attempt, delay in enumerate([0.0, 0.25, 0.8]):
         try:
             if delay:
                 await _sleep_backoff(delay)
-            with anyio.fail_after(15):  # Increased timeout from 10 to 15 seconds
+            with anyio.fail_after(20):  # Increased timeout
                 try:
                     resp = client.responses.create(
                         model=model,
                         input=[
                             {"role": "system", "content": system},
-                            {"role": "user", "content": user},
+                            {"role": "user", "content": user_prompt},
                         ],
                         response_format={"type": "json_object"},
                     )
@@ -117,18 +119,32 @@ async def _openai_generate_hints(topic_id: str, text: str) -> Dict:
                         model=model,
                         messages=[
                             {"role": "system", "content": system},
-                            {"role": "user", "content": user},
+                            {"role": "user", "content": user_prompt},
                         ],
                         response_format={"type": "json_object"},
-                        max_tokens=1000,  # Added explicit max_tokens to prevent cutoff
+                        max_tokens=1500,  # Increased from 1000
                         temperature=0.7,
+                        stop=["\nVraag:", "\nQ:", "\n\nVraag"]  # Stop sequences
                     )
                     text_out = comp.choices[0].message.content
+            
             data = json.loads(text_out or "{}")
-            return data
-        except Exception:
+            
+            # Post-process the response
+            processed_data = _post_process_llm_response(data, mode)
+            return processed_data
+            
+        except Exception as e:
             if attempt == 2:
-                raise
+                # On final failure, return fallback
+                return {
+                    "tutor_message": "Laten we doorgaan met het onderwerp.",
+                    "follow_up_question": {
+                        "id": str(uuid.uuid4())[:8],
+                        "text": "Wat vind je interessant aan dit onderwerp?"
+                    },
+                    "hint": None
+                }
             continue
 
 
