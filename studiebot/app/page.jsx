@@ -330,6 +330,7 @@ function ChatPanel({ mode, context }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
+  const [lastAssistantMessage, setLastAssistantMessage] = useState('')
   const listRef = useRef(null)
   const { fetchGlossary } = useGlossary()
   const GLOSSARY_ENABLED = process.env.NEXT_PUBLIC_GLOSSARY_ENABLED === 'true'
@@ -350,11 +351,12 @@ function ChatPanel({ mode, context }) {
 
   useEffect(() => {
     setMessages([])
+    setLastAssistantMessage('')
     if (mode === 'Leren') {
-      setMessages([{ role: 'assistant', content: 'Laten we beginnen met leren! Wat weet je al over dit hoofdstuk?' }])
+      setMessages([{ role: 'assistant', content: 'Laten we beginnen met leren! Wat weet je al over dit hoofdstuk?', questionId: 'intro' }])
     }
     if (mode === 'Overhoren') {
-      setMessages([{ role: 'assistant', content: 'We gaan je overhoren. Klaar voor vraag 1? Zeg bijvoorbeeld: "Start".' }])
+      setMessages([{ role: 'assistant', content: 'We gaan je overhoren. Klaar voor vraag 1? Zeg bijvoorbeeld: "Start".', questionId: 'intro' }])
     }
   }, [mode])
 
@@ -364,25 +366,58 @@ function ChatPanel({ mode, context }) {
     return () => { if (t) clearTimeout(t) }
   }, [loading])
 
+  const getPreviousAnswer = () => {
+    // Get the last user message as previous answer for context
+    const userMessages = messages.filter(m => m.role === 'user')
+    return userMessages.length > 0 ? userMessages[userMessages.length - 1].content : null
+  }
+
   const send = async () => {
     if (!input.trim()) return
     const next = [...messages, { role: 'user', content: input }]
     setMessages(next); setInput(''); setLoading(true)
+    
     try {
       const llm = getLLMClient()
       const topicId = `${context.vak || 'Onderwerp'}-${context.hoofdstuk || '1'}`
-      if (mode === 'Overhoren') {
-        // For now, reuse hints flow but ensure context is sent; quiz flow can be plugged later
-        const res = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-        const content = [res.tutor_message, res.follow_up_question].filter(Boolean).join('\n')
-        const firstHint = res.hints && res.hints.length > 0 ? res.hints[0] : null
-        setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: firstHint }])
-      } else {
-        const { tutor_message, hints, follow_up_question, notice } = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-        const content = [notice ? `(${notice})` : null, tutor_message, follow_up_question].filter(Boolean).join('\n')
-        const firstHint = hints && hints.length > 0 ? hints[0] : null
-        setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: firstHint }])
+      const previousAnswer = getPreviousAnswer()
+      
+      const requestData = { 
+        topicId, 
+        text: input, 
+        subject: context.vak, 
+        grade: context.leerjaar, 
+        chapter: context.hoofdstuk,
+        previous_answer: previousAnswer,
+        mode: mode === 'Overhoren' ? 'overhoren' : 'leren'
       }
+      
+      const res = await llm.generateHints(requestData)
+      
+      // Handle new structured response
+      const tutorMessage = res.tutor_message || 'Laten we doorgaan.'
+      const followUpQuestion = res.follow_up_question?.text || 'Wat denk je hierover?'
+      const questionId = res.follow_up_question?.id || 'fallback'
+      const hint = res.hint
+      
+      // UI Guards: Skip if identical to previous assistant message
+      if (tutorMessage === lastAssistantMessage) {
+        setMessages((m) => [...m, { 
+          role: 'assistant', 
+          content: followUpQuestion,
+          questionId: questionId,
+          hint: hint?.for_question_id === questionId ? hint.text : null
+        }])
+      } else {
+        setMessages((m) => [...m, { 
+          role: 'assistant', 
+          content: `${tutorMessage}\n\n${followUpQuestion}`,
+          questionId: questionId,
+          hint: hint?.for_question_id === questionId ? hint.text : null
+        }])
+        setLastAssistantMessage(tutorMessage)
+      }
+      
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
     } finally { setLoading(false) }
