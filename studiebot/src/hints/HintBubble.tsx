@@ -38,7 +38,7 @@ export function HintBubble({ hint, className = '' }: HintBubbleProps) {
   }
 
   return (
-    <div className={`flex justify-end mt-2 ${className}`}>
+    <div className={`flex justify-end ${className}`}>
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
@@ -46,12 +46,12 @@ export function HintBubble({ hint, className = '' }: HintBubbleProps) {
             variant="outline"
             size="sm"
             className="
-              w-8 h-8 rounded-full p-0 
-              bg-blue-50 hover:bg-blue-100 
-              dark:bg-blue-900/20 dark:hover:bg-blue-900/40
-              border-blue-200 dark:border-blue-700
-              text-blue-700 dark:text-blue-300
-              focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+              w-10 h-10 rounded-full p-0 
+              bg-yellow-50 hover:bg-yellow-100 
+              dark:bg-yellow-900/20 dark:hover:bg-yellow-900/40
+              border-yellow-200 dark:border-yellow-700
+              text-yellow-700 dark:text-yellow-300
+              focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2
               transition-colors duration-200
             "
             aria-label="Show hint"
@@ -59,7 +59,7 @@ export function HintBubble({ hint, className = '' }: HintBubbleProps) {
             aria-haspopup="dialog"
             type="button"
           >
-            ?
+            💡
           </Button>
         </PopoverTrigger>
         
