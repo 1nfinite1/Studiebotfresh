@@ -524,9 +524,13 @@ function OefentoetsPanel({ context }) {
             <button 
               onClick={submitExam} 
               disabled={loading} 
-              className="rounded-xl bg-white px-8 py-3 font-semibold text-purple-700 hover:bg-purple-50 disabled:opacity-50 transition-colors"
+              className={`rounded-xl px-8 py-3 font-semibold transition-colors ${
+                loading 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-white text-purple-700 hover:bg-purple-50'
+              }`}
             >
-              Inleveren
+              {loading ? 'Oefentoets nakijken...' : 'Inleveren'}
             </button>
           </div>
         </div>
