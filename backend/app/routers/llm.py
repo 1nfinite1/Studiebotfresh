@@ -279,47 +279,86 @@ async def generate_hints(
     if not _bool_env("LLM_ENABLED", False):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="LLM not configured", hint=None)
+        return GenerateHintsOut(
+            tutor_message="LLM niet geconfigureerd",
+            follow_up_question=FollowUpQuestion(id="fallback", text="Wat wil je leren?"),
+            notice="LLM not configured"
+        )
 
     provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
     if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
         response.headers["X-Studiebot-LLM"] = "disabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="not_configured", hint=None)
+        return GenerateHintsOut(
+            tutor_message="LLM niet geconfigureerd",
+            follow_up_question=FollowUpQuestion(id="fallback", text="Wat wil je leren?"),
+            notice="not_configured"
+        )
 
-    if await _moderation_flagged(f"{payload.topicId}\n\n{payload.text}"):
+    moderation_text = f"{payload.topicId}\n\n{payload.text}"
+    if payload.previous_answer:
+        moderation_text += f"\n\n{payload.previous_answer}"
+        
+    if await _moderation_flagged(moderation_text):
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="moderation_blocked", hint=None)
+        return GenerateHintsOut(
+            tutor_message="Dit onderwerp kunnen we hier niet bespreken.",
+            follow_up_question=FollowUpQuestion(id="blocked", text="Heb je een ander onderwerp?"),
+            notice="moderation_blocked"
+        )
 
     try:
         if provider == "openai":
-            data = await _openai_generate_hints(payload.topicId, payload.text)
+            data = await _openai_generate_hints(
+                payload.topicId, 
+                payload.text, 
+                payload.previous_answer,
+                payload.mode or "leren"
+            )
         else:
             data = {}
-        hints_raw = data.get("hints") if isinstance(data, dict) else []
-        if not isinstance(hints_raw, list):
-            hints_raw = []
-        hints = [str(x) for x in hints_raw][:5]
-        single_hint = hints[0] if hints else None
         
-        # Extract additional fields from LLM response
-        tutor_message = data.get("tutor_message", "") if isinstance(data, dict) else ""
-        follow_up_question = data.get("follow_up_question", "") if isinstance(data, dict) else ""
+        # Extract from processed data
+        tutor_message = data.get("tutor_message", "Laten we verder gaan.")
+        follow_up_data = data.get("follow_up_question", {})
+        hint_data = data.get("hint")
+        
+        # Create response objects
+        follow_up_question = FollowUpQuestion(
+            id=follow_up_data.get("id", str(uuid.uuid4())[:8]),
+            text=follow_up_data.get("text", "Wat denk je hierover?")
+        )
+        
+        hint = None
+        if hint_data and hint_data.get("text"):
+            hint = Hint(
+                for_question_id=hint_data.get("for_question_id", follow_up_question.id),
+                text=hint_data["text"]
+            )
+        
+        # Legacy hints field for backward compatibility
+        legacy_hints = [hint.text] if hint else []
         
         out = GenerateHintsOut(
-            hints=hints, 
-            hint=single_hint,
             tutor_message=tutor_message,
-            follow_up_question=follow_up_question
+            follow_up_question=follow_up_question,
+            hint=hint,
+            hints=legacy_hints
         )
+        
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return out
-    except Exception:
+        
+    except Exception as e:
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
-        return GenerateHintsOut(hints=[], notice="provider_error", hint=None)
+        return GenerateHintsOut(
+            tutor_message="Er ging iets mis. Laten we opnieuw beginnen.",
+            follow_up_question=FollowUpQuestion(id="error", text="Wat wil je weten?"),
+            notice="provider_error"
+        )
 
 
 @router.post("/grade-quiz", response_model=GradeQuizOut)
