@@ -183,6 +183,11 @@ async def _openai_grade_quiz(answers: List[str]) -> Dict:
             continue
 
 
+def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
+    if emoji_mode:
+        resp.headers["X-Studiebot-Emoji-Mode"] = emoji_mode
+
+
 def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
     """Post-process LLM response to ensure quality and consistency."""
     
