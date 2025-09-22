@@ -404,8 +404,8 @@ function ChatPanel({ mode, context }) {
           const limitedHint = limitToOneSentence(m.hint)
           
           return (
-            <div key={idx} className={`flex items-start gap-3 ${m.role === 'assistant' ? '' : 'flex-row-reverse'}`}>
-              <div className={`relative max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
+            <div key={idx} className={`flex items-start gap-3 ${m.role === 'assistant' ? '' : 'justify-end'}`}>
+              <div className={`relative max-w-[80%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
                 <div className="max-w-[70ch] whitespace-pre-wrap">
                   <ProcessedText>{m.content}</ProcessedText>
                 </div>
