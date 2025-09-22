@@ -394,15 +394,22 @@ function ChatPanel({ mode, context }) {
     <div className="mx-auto mt-2 w-full max-w-3xl rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
       <div ref={listRef} className="max-h-[50vh] space-y-4 overflow-auto p-2">
         {messages.map((m, idx) => {
-          const [main, ...rest] = String(m.content || '').split('\n').filter(Boolean)
-          const hint = rest.length > 0 ? rest.join('\n') : ''
+          // Helper function to limit hint to one sentence
+          const limitToOneSentence = (text) => {
+            if (!text) return text
+            const match = text.match(/^[^.!?]*[.!?]/)
+            return match ? match[0].trim() : text.trim()
+          }
+          
+          const limitedHint = limitToOneSentence(m.hint)
+          
           return (
             <div key={idx} className={`relative max-w-[85%] rounded-xl px-4 py-3 text-base leading-relaxed ${m.role === 'assistant' ? 'bg-white/15 text-white' : 'ml-auto bg-white text-purple-800'}`} style={{ wordBreak: 'break-word' }}>
               <div className="absolute right-2 top-2">
-                <HintBubble hint={hint} />
+                <HintBubble hint={limitedHint} />
               </div>
               <div className="max-w-[70ch] whitespace-pre-wrap">
-                <ProcessedText>{main}</ProcessedText>
+                <ProcessedText>{m.content}</ProcessedText>
               </div>
             </div>
           )
