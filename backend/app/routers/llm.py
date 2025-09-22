@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import uuid
 from typing import Dict, List
 
 import anyio
@@ -9,6 +11,8 @@ from fastapi import APIRouter, Header, Request, Response
 from app.models.llm import (
     GenerateHintsIn,
     GenerateHintsOut,
+    FollowUpQuestion,
+    Hint,
     GradeQuizIn,
     GradeQuizOut,
 )
