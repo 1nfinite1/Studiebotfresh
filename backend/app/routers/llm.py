@@ -162,6 +162,91 @@ async def _openai_grade_quiz(answers: List[str]) -> Dict:
             continue
 
 
+def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
+    """Post-process LLM response to ensure quality and consistency."""
+    
+    # Extract fields with fallbacks
+    tutor_message = str(data.get("tutor_message", "")).strip()
+    follow_up_question_raw = data.get("follow_up_question", "")
+    hint_raw = data.get("hint", "")
+    
+    # 1. Remove questions from tutor_message
+    tutor_message = re.sub(r'\?[^?]*$', '', tutor_message).strip()
+    tutor_message = re.sub(r'Wat [^.!]*\?', '', tutor_message).strip()
+    tutor_message = re.sub(r'Hoe [^.!]*\?', '', tutor_message).strip()
+    tutor_message = re.sub(r'Waarom [^.!]*\?', '', tutor_message).strip()
+    
+    # Ensure it's not empty after cleaning
+    if not tutor_message or len(tutor_message) < 10:
+        if mode == "overhoren":
+            tutor_message = "Goed, laten we doorgaan."
+        else:
+            tutor_message = "Interessant! Laten we verder gaan."
+    
+    # Limit to ~80 words
+    words = tutor_message.split()
+    if len(words) > 80:
+        tutor_message = ' '.join(words[:80]) + '...'
+    
+    # 2. Ensure follow_up_question is complete
+    follow_up_text = str(follow_up_question_raw).strip()
+    if not follow_up_text.endswith('?'):
+        follow_up_text += '?'
+    
+    # Check if truncated (basic heuristic)
+    if len(follow_up_text) < 10 or follow_up_text.count(' ') < 3:
+        if mode == "overhoren":
+            follow_up_text = "Wat is het volgende belangrijke punt in dit onderwerp?"
+        else:
+            follow_up_text = "Wat denk je hierover?"
+    
+    # Create question ID
+    question_id = str(uuid.uuid4())[:8]
+    
+    # 3. Process hint
+    hint_text = str(hint_raw).strip() if hint_raw else ""
+    if hint_text:
+        # Limit to one sentence
+        first_sentence = re.split(r'[.!?]', hint_text)[0].strip()
+        if first_sentence:
+            hint_text = first_sentence + ('.' if not first_sentence.endswith(('.', '!', '?')) else '')
+    
+    return {
+        "tutor_message": tutor_message,
+        "follow_up_question": {
+            "id": question_id,
+            "text": follow_up_text
+        },
+        "hint": {
+            "for_question_id": question_id,
+            "text": hint_text
+        } if hint_text else None
+    }
+
+
+def _build_context_prompt(topic_id: str, text: str, previous_answer: str = None, mode: str = "leren") -> str:
+    """Build context-aware prompt based on conversation history."""
+    
+    context = f'Onderwerp: "{topic_id}"\n'
+    
+    if previous_answer:
+        context += f'Student antwoordde eerder: "{previous_answer}"\n'
+        if mode == "leren":
+            context += f'Huidige student input: "{text}"\n\n'
+            context += 'Geef feedback op het student antwoord en stel een verdiepende vraag.'
+        else:  # overhoren
+            context += f'Nieuwe student antwoord: "{text}"\n\n'
+            context += 'Geef feedback (correct/incorrect) en stel de volgende overhoring vraag.'
+    else:
+        context += f'Student input: "{text}"\n\n'
+        if mode == "leren":
+            context += 'Start de leer-interactie met een eerste verdiepende vraag.'
+        else:  # overhoren
+            context += 'Start de overhoring met de eerste vraag.'
+    
+    return context
+
+
 def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
     if emoji_mode:
         resp.headers["X-Studiebot-Emoji-Mode"] = emoji_mode
