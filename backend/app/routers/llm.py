@@ -54,7 +54,25 @@ async def _moderation_flagged(text: str) -> bool:
             res = client.moderations.create(model=model, input=text)
         flagged = False
         try:
-            flagged = bool(getattr(res, "results")[0].get("flagged", False))  # type: ignore
+            # Only flag for high-confidence harmful content, not casual language
+            result = getattr(res, "results")[0]
+            categories = result.get("categories", {})
+            category_scores = result.get("category_scores", {})
+            
+            # Only flag for serious violations with high confidence scores
+            serious_violations = [
+                "harassment/threatening",
+                "hate",
+                "self-harm",
+                "sexual/minors",
+                "violence"
+            ]
+            
+            for violation in serious_violations:
+                if categories.get(violation, False) and category_scores.get(violation, 0) > 0.8:
+                    flagged = True
+                    break
+                    
         except Exception:
             flagged = False
         return flagged
