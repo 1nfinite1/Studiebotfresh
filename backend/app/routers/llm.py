@@ -197,7 +197,17 @@ async def generate_hints(
             hints_raw = []
         hints = [str(x) for x in hints_raw][:5]
         single_hint = hints[0] if hints else None
-        out = GenerateHintsOut(hints=hints, hint=single_hint)
+        
+        # Extract additional fields from LLM response
+        tutor_message = data.get("tutor_message", "") if isinstance(data, dict) else ""
+        follow_up_question = data.get("follow_up_question", "") if isinstance(data, dict) else ""
+        
+        out = GenerateHintsOut(
+            hints=hints, 
+            hint=single_hint,
+            tutor_message=tutor_message,
+            follow_up_question=follow_up_question
+        )
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
         return out
