@@ -374,12 +374,14 @@ function ChatPanel({ mode, context }) {
       if (mode === 'Overhoren') {
         // For now, reuse hints flow but ensure context is sent; quiz flow can be plugged later
         const res = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-        const content = [res.tutor_message, ...(res.hints || []), res.follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
-        setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+        const content = [res.tutor_message, res.follow_up_question].filter(Boolean).join('\n')
+        const firstHint = res.hints && res.hints.length > 0 ? res.hints[0] : null
+        setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: firstHint }])
       } else {
         const { tutor_message, hints, follow_up_question, notice } = await llm.generateHints({ topicId, text: input, subject: context.vak, grade: context.leerjaar, chapter: context.hoofdstuk })
-        const content = [notice ? `(${notice})` : null, tutor_message, ...(hints || []), follow_up_question].filter(Boolean).map((h) => `- ${h}`).join('\n')
-        setMessages((m) => [...m, { role: 'assistant', content: content || '...' }])
+        const content = [notice ? `(${notice})` : null, tutor_message, follow_up_question].filter(Boolean).join('\n')
+        const firstHint = hints && hints.length > 0 ? hints[0] : null
+        setMessages((m) => [...m, { role: 'assistant', content: content || '...', hint: firstHint }])
       }
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
