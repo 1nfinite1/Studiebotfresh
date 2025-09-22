@@ -92,7 +92,7 @@ async def _openai_generate_hints(topic_id: str, text: str) -> Dict:
         try:
             if delay:
                 await _sleep_backoff(delay)
-            with anyio.fail_after(10):
+            with anyio.fail_after(15):  # Increased timeout from 10 to 15 seconds
                 try:
                     resp = client.responses.create(
                         model=model,
@@ -116,6 +116,8 @@ async def _openai_generate_hints(topic_id: str, text: str) -> Dict:
                             {"role": "user", "content": user},
                         ],
                         response_format={"type": "json_object"},
+                        max_tokens=1000,  # Added explicit max_tokens to prevent cutoff
+                        temperature=0.7,
                     )
                     text_out = comp.choices[0].message.content
             data = json.loads(text_out or "{}")
