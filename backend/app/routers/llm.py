@@ -210,84 +210,97 @@ def _calculate_hint_relevance(hint_text: str, question_text: str) -> float:
 
 
 def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
-    """Enhanced post-processor with quality checks and debugging."""
+    """Enhanced post-processor with debugging and quality checks."""
+    
+    print(f"[DEBUG] Raw LLM response: {data}")
+    print(f"[DEBUG] Mode: {mode}")
     
     # Extract fields with fallbacks
     tutor_message = str(data.get("tutor_message", "")).strip()
     follow_up_question_raw = data.get("follow_up_question", "")
     hint_raw = data.get("hint", "")
     
-    # 1. Aggressive question removal from tutor_message
-    original_tutor = tutor_message
-    tutor_message = re.sub(r'\s*[A-Z][^.!?]*\?[^.!?]*', '', tutor_message)
-    tutor_message = re.sub(r'\?[^.!?]*$', '', tutor_message)
-    tutor_message = re.sub(r'Wat [^.!]*\?', '', tutor_message)
-    tutor_message = re.sub(r'Hoe [^.!]*\?', '', tutor_message)
-    tutor_message = re.sub(r'Waarom [^.!]*\?', '', tutor_message)
-    tutor_message = re.sub(r'Welke [^.!]*\?', '', tutor_message)
-    tutor_message = re.sub(r'Kunnen? [^.!]*\?', '', tutor_message)
-    tutor_message = tutor_message.strip()
+    print(f"[DEBUG] Original tutor_message: '{tutor_message}'")
+    print(f"[DEBUG] Original follow_up_question: '{follow_up_question_raw}'")
+    print(f"[DEBUG] Original hint: '{hint_raw}'")
     
-    # Ensure it's not empty after aggressive cleaning
-    if not tutor_message or len(tutor_message) < 5:
+    # 1. Less aggressive question removal from tutor_message
+    original_tutor = tutor_message
+    if tutor_message:
+        # Only remove obvious questions at the end
+        tutor_message = re.sub(r'\s*\?[^.!?]*$', '', tutor_message)
+        # Remove only complete question sentences
+        tutor_message = re.sub(r'\s*[A-Z][^.!?]*\?\s*$', '', tutor_message)
+        tutor_message = tutor_message.strip()
+    
+    print(f"[DEBUG] Cleaned tutor_message: '{tutor_message}'")
+    
+    # Ensure it's not empty after cleaning, but be less strict
+    if not tutor_message or len(tutor_message) < 3:
         if mode == "overhoren":
-            tutor_message = "Correct!" if "correct" in original_tutor.lower() else "Goed geprobeerd."
+            if "correct" in original_tutor.lower() or "goed" in original_tutor.lower():
+                tutor_message = "Correct! 👍"
+            else:
+                tutor_message = "Goed geprobeerd."
         else:
             tutor_message = "Interessant! 👍"
     
-    # Limit to ~50 words strictly
+    # More generous word limit
     words = tutor_message.split()
-    if len(words) > 50:
-        tutor_message = ' '.join(words[:50]) + '...'
+    if len(words) > 60:  # Increased from 50
+        tutor_message = ' '.join(words[:60])
     
-    # 2. Ensure follow_up_question is complete and high quality
+    # 2. Less strict follow_up_question processing
     follow_up_text = str(follow_up_question_raw).strip()
     
-    # Auto-complete if needed
-    if not follow_up_text.endswith('?'):
+    print(f"[DEBUG] Processing follow_up_question: '{follow_up_text}'")
+    
+    # Only auto-complete if really needed
+    if follow_up_text and not follow_up_text.endswith('?'):
         follow_up_text += '?'
     
-    # Quality checks
-    if len(follow_up_text) < 10 or follow_up_text.count(' ') < 2:
-        # Generate better fallback based on mode
+    # Less strict quality checks
+    if not follow_up_text or len(follow_up_text) < 5:
+        # Generate better fallback based on context
         if mode == "overhoren":
-            follow_up_text = "Wat is het volgende belangrijke concept in dit onderwerp?"
+            follow_up_text = "Wat is de volgende belangrijke gebeurtenis?"
         else:
-            follow_up_text = "Wat vind je hiervan het meest interessant?"
-    
-    # Check for incomplete sentences (common LLM issue)
-    if follow_up_text.startswith(('Wat denk', 'Hoe zou', 'Waarom is')) and len(follow_up_text.split()) < 8:
-        follow_up_text = f"{follow_up_text.rstrip('?')} volgens jou?"
+            follow_up_text = "Wat vind je hiervan het interessantst?"
     
     # Create question ID
     question_id = str(uuid.uuid4())[:8]
     
-    # 3. Process hint with relevance checking
+    # 3. Much more lenient hint processing
     hint_text = str(hint_raw).strip() if hint_raw else ""
     hint_obj = None
     
-    if hint_text:
-        # Limit to one sentence strictly
+    print(f"[DEBUG] Processing hint: '{hint_text}'")
+    
+    if hint_text and len(hint_text) > 2:
+        # Less strict sentence processing
         sentences = re.split(r'[.!?]', hint_text)
-        first_sentence = sentences[0].strip() if sentences else ""
+        first_sentence = sentences[0].strip() if sentences else hint_text.strip()
         
-        if first_sentence and len(first_sentence) > 3:
+        if first_sentence and len(first_sentence) > 2:
             # Ensure proper ending
             if not first_sentence.endswith(('.', '!', '?')):
                 first_sentence += '.'
             
-            # Check relevance to question
+            # Much lower relevance threshold
             relevance = _calculate_hint_relevance(first_sentence, follow_up_text)
+            print(f"[DEBUG] Hint relevance score: {relevance}")
             
-            # Only include hint if sufficiently relevant
-            if relevance >= 0.3:  # Threshold for relevance
+            # Lower threshold for inclusion
+            if relevance >= 0.1 or len(first_sentence) > 10:  # Much more lenient
                 hint_obj = {
                     "for_question_id": question_id,
                     "text": first_sentence
                 }
-            # else: drop irrelevant hint
+                print(f"[DEBUG] Hint accepted: '{first_sentence}'")
+            else:
+                print(f"[DEBUG] Hint rejected due to low relevance: {relevance}")
     
-    return {
+    result = {
         "tutor_message": tutor_message,
         "follow_up_question": {
             "id": question_id,
@@ -295,6 +308,9 @@ def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
         },
         "hint": hint_obj
     }
+    
+    print(f"[DEBUG] Final processed result: {result}")
+    return result
 
 
 def _build_context_prompt(topic_id: str, text: str, previous_answer: str = None, mode: str = "leren") -> str:
