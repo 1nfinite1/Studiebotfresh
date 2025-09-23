@@ -298,26 +298,33 @@ def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
 
 
 def _build_context_prompt(topic_id: str, text: str, previous_answer: str = None, mode: str = "leren") -> str:
-    """Build context-aware prompt based on conversation history."""
+    """Build enhanced context-aware prompt with better structure."""
     
-    context = f'Onderwerp: "{topic_id}"\n'
+    context_parts = []
+    context_parts.append(f'ONDERWERP: "{topic_id}"')
     
-    if previous_answer:
-        context += f'Student antwoordde eerder: "{previous_answer}"\n'
-        if mode == "leren":
-            context += f'Huidige student input: "{text}"\n\n'
-            context += 'Geef feedback op het student antwoord en stel een verdiepende vraag.'
-        else:  # overhoren
-            context += f'Nieuwe student antwoord: "{text}"\n\n'
-            context += 'Geef feedback (correct/incorrect) en stel de volgende overhoring vraag.'
-    else:
-        context += f'Student input: "{text}"\n\n'
-        if mode == "leren":
-            context += 'Start de leer-interactie met een eerste verdiepende vraag.'
-        else:  # overhoren
-            context += 'Start de overhoring met de eerste vraag.'
+    if mode == "overhoren":
+        context_parts.append('MODUS: Overhoren (toets de kennis)')
+        if previous_answer:
+            context_parts.append(f'VORIGE STUDENT ANTWOORD: "{previous_answer}"')
+            context_parts.append(f'NIEUWE STUDENT ANTWOORD: "{text}"')
+            context_parts.append('\nGeef kort feedback (correct/incorrect) en stel daarna één nieuwe overhoring vraag.')
+        else:
+            context_parts.append(f'STUDENT INPUT: "{text}"')
+            context_parts.append('\nStart de overhoring met één duidelijke toetsvraag.')
+    else:  # leren mode
+        context_parts.append('MODUS: Leren (verdiep de kennis)')
+        if previous_answer:
+            context_parts.append(f'VORIGE STUDENT ANTWOORD: "{previous_answer}"')
+            context_parts.append(f'NIEUWE STUDENT INPUT: "{text}"')
+            context_parts.append('\nGeef vriendelijke feedback op het antwoord en stel daarna één verdiepende vraag.')
+        else:
+            context_parts.append(f'STUDENT INPUT: "{text}"')
+            context_parts.append('\nStart met een vriendelijke reactie en stel één verdiepende vraag.')
     
-    return context
+    context_parts.append('\nONTHOUD: tutor_message NOOIT een vraag, follow_up_question ALTIJD één vraag, hint ALLEEN voor de nieuwe vraag.')
+    
+    return '\n'.join(context_parts)
 
 
 def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
