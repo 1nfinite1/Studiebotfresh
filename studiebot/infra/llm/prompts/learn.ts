@@ -22,14 +22,14 @@ Gedrag:
 - Houd het compact en duidelijk; 2–3 emoji max in tutor_message.
 
 ⚠︎ Contract (UI/backend):
-- Je MOET onderstaande JSON leveren (geen extra tekst buiten JSON).
-- Velden die de server verwacht:
+- Lever uitsluitend onderstaand JSON (geen extra tekst).
+- Verplichte velden:
   • tutor_message: string (korte uitleg/bemoediging, met 2–3 emoji)
   • follow_up_question: string (de vraag die momentum geeft)
   • hints: array<string> (mag leeg zijn: [])
-  • defined_terms: array<string> (optioneel, mag leeg)
-  • next_bloom: "remember"|"understand"|"apply"|"analyze"|"evaluate"|"create" (mag default "remember")
-  • next_difficulty: "easy"|"medium"|"hard" (mag default "easy")
+  • defined_terms: array<string> (mag leeg zijn: [])
+  • next_bloom: "remember"|"understand"|"apply"|"analyze"|"evaluate"|"create" (default "remember")
+  • next_difficulty: "easy"|"medium"|"hard" (default "easy")
 
 Uitvoerformaat (strikt JSON):
 {
