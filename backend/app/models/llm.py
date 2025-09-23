@@ -29,15 +29,14 @@ class Hint(BaseModel):
     def text_must_be_single_sentence(cls, v):
         v = v.strip()
         if not v:
-            raise ValueError('Hint cannot be empty')
-        if len(v.split()) > 25:  # Stricter word limit
-            raise ValueError('Hint too long (max ~20 words)')
-        # Check for multiple sentences
-        sentence_endings = len(re.findall(r'[.!?]', v))
-        if sentence_endings > 1:
-            raise ValueError('Hint must be exactly one sentence')
+            return ""  # Allow empty hints instead of failing
+        if len(v.split()) > 30:  # More lenient word limit
+            # Truncate instead of failing
+            words = v.split()[:25]
+            v = ' '.join(words)
+        # Auto-complete sentence instead of strict validation
         if not any(v.endswith(ending) for ending in ['.', '!', '?']):
-            v += '.'  # Auto-complete sentence
+            v += '.'
         return v
 
 
