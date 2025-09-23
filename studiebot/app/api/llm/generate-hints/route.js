@@ -34,51 +34,49 @@ function buildHintPromptFromQuestion(question) {
   ].join('\n');
 }
 
-
 export async function POST(req) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // >>> PATCH: bouw hintprompt uit de (door de frontend meegestuurde) quizvraag
+    // Bouw hintprompt uit vraag (indien meegestuurd)
     const question = body?.question || null;
     const hintText = question?.stem
       ? buildHintPromptFromQuestion(question)
-      : String(body.text || ''); // fallback op bestaand gedrag als er (nog) geen vraag wordt meegestuurd
-    // <<< PATCH
+      : String(body.text || ''); // fallback
 
     const res = await srvGenerateHints({
       topicId: String(body.topicId || body.topic || ''),
-      text: hintText, // <<-- hier dwingen we de vraag-gebonden hint-context af
+      text: hintText,
       currentBloom: body.currentBloom || 'remember',
       currentDifficulty: body.currentDifficulty || 'easy',
       wasCorrect: body.wasCorrect,
       subject: body.subject,
       grade: body.grade,
-      chapter: body.chapter
+      chapter: body.chapter,
+      hintFromQuestion: Boolean(question?.stem)  // <-- dit zorgt dat server geen lescontext bijmengt
     });
 
-   // Bepaal welke input is gebruikt voor de hint (vraag of fallback)
-const used = question?.stem ? 'used_question' : 'fallback_text';
+    const used = question?.stem ? 'used_question' : 'fallback_text';
 
-if (res?.no_material) {
-  return jsonErr(
-    400,
-    'no_material',
-    res?.message || 'Er is nog geen lesmateriaal geactiveerd voor dit vak/leerjaar/hoofdstuk.',
-    { policy: res?.policy, db_ok: res?.db_ok },
-    new Headers({ 'X-Debug': 'llm:hints|no_material' })
-  );
-}
+    if (res?.no_material) {
+      return jsonErr(
+        400,
+        'no_material',
+        res?.message || 'Er is nog geen lesmateriaal geactiveerd voor dit vak/leerjaar/hoofdstuk.',
+        { policy: res?.policy, db_ok: res?.db_ok },
+        new Headers({ 'X-Debug': 'llm:hints|no_material' })
+      );
+    }
 
-const headers = new Headers({
-  'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled',
-  'X-Debug': `llm:hints|${used}`,
-  'X-Context-Size': String(res?.context_len || 0),
-  ...(res?.model ? { 'X-Model': String(res.model) } : {}),
-  ...(res?.usage?.prompt_tokens != null ? { 'X-Prompt-Tokens': String(res.usage.prompt_tokens) } : {}),
-  ...(res?.usage?.completion_tokens != null ? { 'X-Completion-Tokens': String(res.usage.completion_tokens) } : {}),
-});
-    
+    const headers = new Headers({
+      'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled',
+      'X-Debug': `llm:hints|${used}`,
+      'X-Context-Size': String(res?.context_len || 0),
+      ...(res?.model ? { 'X-Model': String(res.model) } : {}),
+      ...(res?.usage?.prompt_tokens != null ? { 'X-Prompt-Tokens': String(res.usage.prompt_tokens) } : {}),
+      ...(res?.usage?.completion_tokens != null ? { 'X-Completion-Tokens': String(res.usage.completion_tokens) } : {}),
+    });
+
     const payload = {
       tutor_message: res?.tutor_message || '',
       hints: Array.isArray(res?.hints) ? res.hints : [],
@@ -90,14 +88,14 @@ const headers = new Headers({
       db_ok: Boolean(res?.db_ok)
     };
 
-// Guardrail: normaliseer hints (max 200 chars, geen lege strings)
-if (Array.isArray(payload.hints)) {
-  payload.hints = payload.hints
-    .map(h => String(h || '').trim())
-    .filter(Boolean)
-    .map(h => h.length > 200 ? h.slice(0, 200) + '…' : h);
-}
-    
+    // Guardrail: normaliseer hints (max 200 chars, geen lege strings)
+    if (Array.isArray(payload.hints)) {
+      payload.hints = payload.hints
+        .map(h => String(h || '').trim())
+        .filter(Boolean)
+        .map(h => (h.length > 200 ? h.slice(0, 200) + '…' : h));
+    }
+
     return jsonOk(payload, headers);
   } catch (error) {
     return jsonErr(
@@ -105,7 +103,7 @@ if (Array.isArray(payload.hints)) {
       'server_error',
       'Onverwachte serverfout',
       { db_ok: false },
-      new Headers({ 'X-Debug': 'llm:learn|server_error' })
+      new Headers({ 'X-Debug': 'llm:hints|server_error' })
     );
   }
 }
