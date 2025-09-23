@@ -1,70 +1,94 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { srvGradeQuiz } from '../../../../infra/llm/server/openaiClient';
+import { srvQuizGrade } from '../../../../infra/llm/server/openaiClient';
+
+function jsonOk(data, headers, status = 200) { return NextResponse.json({ ok: true, ...data }, { status, headers }); }
+function jsonErr(status, reason, message, extra, headers) { return NextResponse.json({ ok: false, reason, message, ...extra }, { status, headers }); }
 
 export async function POST(req) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Support both single-item grading and batch grading
-    let answers = Array.isArray(body.answers) ? body.answers : [];
-    let questions = Array.isArray(body.questions) ? body.questions : [];
-    let objectives = Array.isArray(body.objectives) ? body.objectives : [];
+    // Verwacht payload:
+    // {
+    //   topicId, subject, grade, chapter,
+    //   question: { question_id, type, stem, choices, answer_key, difficulty },
+    //   user_answer: "..."
+    // }
 
-    if (body.question && typeof body.question === 'object') {
-      const q = body.question;
-      const studentAnswer = body.student_answer ?? body.answer ?? '';
-      answers = [String(studentAnswer)];
-      questions = [String(q.stem || '')];
-      objectives = [String(q.objective || 'general')];
-    }
-
-    const isExam = Boolean(body.isExam);
-
-    const res = await srvGradeQuiz({
-      answers,
-      questions,
-      objectives,
-      isExam,
+    const q = body?.question || {};
+    const res = await srvQuizGrade({
+      topicId: String(body.topicId || body.topic || ''),
       subject: body.subject,
       grade: body.grade,
       chapter: body.chapter,
-      topicId: body.topicId || body.topic,
+      // vraag + leerlingantwoord doorgeven
+      question: {
+        question_id: q.question_id,
+        type: q.type,
+        stem: q.stem,
+        choices: q.choices,
+        answer_key: q.answer_key,
+        difficulty: q.difficulty
+      },
+      user_answer: String(body.user_answer ?? '')
     });
+
+    if (res?.no_material) {
+      return jsonErr(
+        400,
+        'no_material',
+        res?.message || 'Er is nog geen lesmateriaal geactiveerd.',
+        { policy: res?.policy, db_ok: res?.db_ok },
+        new Headers({ 'X-Debug': 'llm:quiz|no_material' })
+      );
+    }
+
+    // Standaardiseer payload richting frontend
+    const verdict = res?.verdict || (res?.is_correct === true ? 'correct' : (res?.is_correct === false ? 'incorrect' : 'partial'));
+    const isCorrect = res?.is_correct ?? (verdict === 'correct');
+    const emoji = isCorrect ? '✅' : (verdict === 'partial' ? '🤔' : '❌');
+    const feedback = (res?.feedback || res?.explanation || '').toString().trim();
+    const modelAnswer = (res?.model_answer || res?.answer_key || res?.solution || '').toString().trim();
 
     const headers = new Headers({
       'X-Studiebot-LLM': res?.header === 'enabled' ? 'enabled' : 'disabled',
+      'X-Debug': `llm:quiz|graded`,
+      'X-Context-Size': String(res?.context_len || 0),
+      ...(res?.model ? { 'X-Model': String(res.model) } : {}),
+      ...(res?.usage?.prompt_tokens != null ? { 'X-Prompt-Tokens': String(res.usage.prompt_tokens) } : {}),
+      ...(res?.usage?.completion_tokens != null ? { 'X-Completion-Tokens': String(res.usage.completion_tokens) } : {}),
     });
 
     const payload = {
-      ok: true,
-      is_correct: Boolean(res?.is_correct),
-      score: Number(res?.score) || 0,
-      feedback: res?.feedback || '',
-      tags: Array.isArray(res?.tags) ? res.tags : [],
-      next_recommended_focus: Array.isArray(res?.next_recommended_focus) ? res.next_recommended_focus : [],
-      weak_areas: Array.isArray(res?.weak_areas) ? res.weak_areas : [],
-      chat_prefill: res?.chat_prefill || '',
+      verdict,                    // 'correct' | 'incorrect' | 'partial'
+      is_correct: !!isCorrect,    // boolean
+      emoji,                      // '✅' | '❌' | '🤔'
+      feedback: feedback,         // 1–2 zinnen uitleg
+      expected: modelAnswer,      // toonbaar “goed antwoord”
+      normalized_user_answer: res?.normalized_user_answer || '',
+      next_bloom: res?.next_bloom || 'remember',
+      next_difficulty: res?.next_difficulty || 'easy',
       policy: res?.policy || { guardrail_triggered: false, reason: 'none' },
-      db_ok: Boolean(res?.db_ok),
+      db_ok: Boolean(res?.db_ok)
     };
 
-    return NextResponse.json(payload, { headers, status: 200 });
+    // Korte sanity guard (te lang = afkappen met ellipsis)
+    if (payload.feedback && payload.feedback.length > 400) {
+      payload.feedback = payload.feedback.slice(0, 400) + '…';
+    }
+    if (payload.expected && payload.expected.length > 400) {
+      payload.expected = payload.expected.slice(0, 400) + '…';
+    }
+
+    return jsonOk(payload, headers);
   } catch (error) {
-    const headers = new Headers({ 'X-Studiebot-LLM': 'disabled' });
-    const errorResponse = {
-      ok: false,
-      error: 'server_error',
-      is_correct: false,
-      score: 0,
-      feedback: 'Er ging iets mis bij het beoordelen.',
-      tags: [],
-      next_recommended_focus: [],
-      weak_areas: [],
-      chat_prefill: '',
-      policy: { guardrail_triggered: false, reason: 'none' },
-      db_ok: false,
-    };
-    return NextResponse.json(errorResponse, { status: 500, headers });
+    return jsonErr(
+      500,
+      'server_error',
+      'Onverwachte serverfout',
+      { db_ok: false },
+      new Headers({ 'X-Debug': 'llm:quiz|server_error' })
+    );
   }
 }
