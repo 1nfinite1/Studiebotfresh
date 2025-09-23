@@ -188,54 +188,104 @@ def _echo_emoji_mode(resp: Response, emoji_mode: str | None):
         resp.headers["X-Studiebot-Emoji-Mode"] = emoji_mode
 
 
+def _calculate_hint_relevance(hint_text: str, question_text: str) -> float:
+    """Calculate relevance score between hint and question (0.0-1.0)."""
+    if not hint_text or not question_text:
+        return 0.0
+    
+    hint_words = set(hint_text.lower().split())
+    question_words = set(question_text.lower().split())
+    
+    # Remove common Dutch words
+    common_words = {'de', 'het', 'een', 'en', 'van', 'is', 'was', 'zijn', 'wat', 'hoe', 'waar', 'waarom', 'wie'}
+    hint_words -= common_words
+    question_words -= common_words
+    
+    if not hint_words or not question_words:
+        return 0.2  # Default low score
+    
+    # Calculate overlap
+    overlap = len(hint_words & question_words)
+    return min(1.0, overlap / len(question_words))
+
+
 def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
-    """Post-process LLM response to ensure quality and consistency."""
+    """Enhanced post-processor with quality checks and debugging."""
     
     # Extract fields with fallbacks
     tutor_message = str(data.get("tutor_message", "")).strip()
     follow_up_question_raw = data.get("follow_up_question", "")
     hint_raw = data.get("hint", "")
     
-    # 1. Remove questions from tutor_message
-    tutor_message = re.sub(r'\?[^?]*$', '', tutor_message).strip()
-    tutor_message = re.sub(r'Wat [^.!]*\?', '', tutor_message).strip()
-    tutor_message = re.sub(r'Hoe [^.!]*\?', '', tutor_message).strip()
-    tutor_message = re.sub(r'Waarom [^.!]*\?', '', tutor_message).strip()
+    # 1. Aggressive question removal from tutor_message
+    original_tutor = tutor_message
+    tutor_message = re.sub(r'\s*[A-Z][^.!?]*\?[^.!?]*', '', tutor_message)
+    tutor_message = re.sub(r'\?[^.!?]*$', '', tutor_message)
+    tutor_message = re.sub(r'Wat [^.!]*\?', '', tutor_message)
+    tutor_message = re.sub(r'Hoe [^.!]*\?', '', tutor_message)
+    tutor_message = re.sub(r'Waarom [^.!]*\?', '', tutor_message)
+    tutor_message = re.sub(r'Welke [^.!]*\?', '', tutor_message)
+    tutor_message = re.sub(r'Kunnen? [^.!]*\?', '', tutor_message)
+    tutor_message = tutor_message.strip()
     
-    # Ensure it's not empty after cleaning
-    if not tutor_message or len(tutor_message) < 10:
+    # Ensure it's not empty after aggressive cleaning
+    if not tutor_message or len(tutor_message) < 5:
         if mode == "overhoren":
-            tutor_message = "Goed, laten we doorgaan."
+            tutor_message = "Correct!" if "correct" in original_tutor.lower() else "Goed geprobeerd."
         else:
-            tutor_message = "Interessant! Laten we verder gaan."
+            tutor_message = "Interessant! 👍"
     
-    # Limit to ~80 words
+    # Limit to ~50 words strictly
     words = tutor_message.split()
-    if len(words) > 80:
-        tutor_message = ' '.join(words[:80]) + '...'
+    if len(words) > 50:
+        tutor_message = ' '.join(words[:50]) + '...'
     
-    # 2. Ensure follow_up_question is complete
+    # 2. Ensure follow_up_question is complete and high quality
     follow_up_text = str(follow_up_question_raw).strip()
+    
+    # Auto-complete if needed
     if not follow_up_text.endswith('?'):
         follow_up_text += '?'
     
-    # Check if truncated (basic heuristic)
-    if len(follow_up_text) < 10 or follow_up_text.count(' ') < 3:
+    # Quality checks
+    if len(follow_up_text) < 10 or follow_up_text.count(' ') < 2:
+        # Generate better fallback based on mode
         if mode == "overhoren":
-            follow_up_text = "Wat is het volgende belangrijke punt in dit onderwerp?"
+            follow_up_text = "Wat is het volgende belangrijke concept in dit onderwerp?"
         else:
-            follow_up_text = "Wat denk je hierover?"
+            follow_up_text = "Wat vind je hiervan het meest interessant?"
+    
+    # Check for incomplete sentences (common LLM issue)
+    if follow_up_text.startswith(('Wat denk', 'Hoe zou', 'Waarom is')) and len(follow_up_text.split()) < 8:
+        follow_up_text = f"{follow_up_text.rstrip('?')} volgens jou?"
     
     # Create question ID
     question_id = str(uuid.uuid4())[:8]
     
-    # 3. Process hint
+    # 3. Process hint with relevance checking
     hint_text = str(hint_raw).strip() if hint_raw else ""
+    hint_obj = None
+    
     if hint_text:
-        # Limit to one sentence
-        first_sentence = re.split(r'[.!?]', hint_text)[0].strip()
-        if first_sentence:
-            hint_text = first_sentence + ('.' if not first_sentence.endswith(('.', '!', '?')) else '')
+        # Limit to one sentence strictly
+        sentences = re.split(r'[.!?]', hint_text)
+        first_sentence = sentences[0].strip() if sentences else ""
+        
+        if first_sentence and len(first_sentence) > 3:
+            # Ensure proper ending
+            if not first_sentence.endswith(('.', '!', '?')):
+                first_sentence += '.'
+            
+            # Check relevance to question
+            relevance = _calculate_hint_relevance(first_sentence, follow_up_text)
+            
+            # Only include hint if sufficiently relevant
+            if relevance >= 0.3:  # Threshold for relevance
+                hint_obj = {
+                    "for_question_id": question_id,
+                    "text": first_sentence
+                }
+            # else: drop irrelevant hint
     
     return {
         "tutor_message": tutor_message,
@@ -243,10 +293,7 @@ def _post_process_llm_response(data: Dict, mode: str = "leren") -> Dict:
             "id": question_id,
             "text": follow_up_text
         },
-        "hint": {
-            "for_question_id": question_id,
-            "text": hint_text
-        } if hint_text else None
+        "hint": hint_obj
     }
 
 
