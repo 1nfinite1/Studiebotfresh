@@ -11,14 +11,13 @@ class FollowUpQuestion(BaseModel):
     def text_must_be_complete_question(cls, v):
         v = v.strip()
         if not v.endswith('?'):
-            raise ValueError('Follow-up question must end with ?')
-        if len(v.split()) > 20:  # Stricter limit
-            raise ValueError('Follow-up question too long (max ~15 words)')
-        if len(v) < 10:
-            raise ValueError('Follow-up question too short')
-        # Check for incomplete sentences
-        if v.count(' ') < 2:
-            raise ValueError('Follow-up question seems incomplete')
+            v += '?'  # Auto-fix instead of raising error
+        if len(v.split()) > 25:  # More lenient limit
+            # Truncate instead of failing
+            words = v.split()[:20]
+            v = ' '.join(words) + '?'
+        if len(v) < 5:
+            v = "Wat denk je hierover?"  # Fallback instead of error
         return v
 
 
