@@ -395,14 +395,22 @@ function ChatPanel({ mode, context }) {
       
       const res = await llm.generateHints(requestData)
       
-      // Handle new structured response
+      // Handle new structured response with enhanced validation
       const tutorMessage = res.tutor_message || 'Laten we doorgaan.'
       const followUpQuestion = res.follow_up_question?.text || 'Wat denk je hierover?'
       const questionId = res.follow_up_question?.id || 'fallback'
       const hint = res.hint
       
-      // UI Guards: Skip if identical to previous assistant message
+      // Enhanced UI Guards
+      // 1. Skip if identical question ID to prevent exact duplicates
+      if (questionId === lastQuestionId && questionId !== 'fallback') {
+        console.log('Duplicate question ID detected, regenerating...')
+        return // Skip this response
+      }
+      
+      // 2. Skip if tutor message is byte-identical to previous
       if (tutorMessage === lastAssistantMessage) {
+        console.log('Duplicate tutor message detected, using fallback')
         setMessages((m) => [...m, { 
           role: 'assistant', 
           content: followUpQuestion,
@@ -410,14 +418,22 @@ function ChatPanel({ mode, context }) {
           hint: hint?.for_question_id === questionId ? hint.text : null
         }])
       } else {
+        // 3. Render tutor message and question separately but combined for now
+        const combinedMessage = tutorMessage.trim() && followUpQuestion.trim() 
+          ? `${tutorMessage}\n\n${followUpQuestion}` 
+          : followUpQuestion
+          
         setMessages((m) => [...m, { 
           role: 'assistant', 
-          content: `${tutorMessage}\n\n${followUpQuestion}`,
+          content: combinedMessage,
           questionId: questionId,
           hint: hint?.for_question_id === questionId ? hint.text : null
         }])
+        
         setLastAssistantMessage(tutorMessage)
       }
+      
+      setLastQuestionId(questionId)
       
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: 'Er ging iets mis. Probeer het later nog eens.' }])
