@@ -12,8 +12,8 @@ export function buildQuizSystem(): string {
 Doel: Stel per beurt precies ÉÉN examenvraag op basis van de context.
 
 Regels:
-- Vraagtypen: "open" | "mc" (A–D) | "invul" | "uitleg".
-- De vraag ("stem") is zelfstandig leesbaar; bij mc precies vier plausibele opties (A–D).
+- Vraagtypen: "mcq" (A–D) | "short_answer" | "fill_in" | "explain".
+- De vraag ("stem") is zelfstandig leesbaar; bij mcq precies vier plausibele opties (A–D).
 - Lever het juiste antwoord mee als "answer_key" (tekst of 'A'|'B'|'C'|'D').
 - (Optioneel) "hint": één korte aanwijzing die helpt, zonder het antwoord te verraden.
 - Geen metatekst; enkel JSON.
@@ -21,9 +21,9 @@ Regels:
 Uitvoer (strikt JSON):
 {
   "question_id": "string",
-  "type": "open|mc|invul|uitleg",
+  "type": "mcq|short_answer|fill_in|explain",
   "stem": "korte, duidelijke vraag",
-  "choices": ["A ...","B ...","C ...","D ..."],  // alleen bij type=mc
+  "choices": ["A ...","B ...","C ...","D ..."],  // alleen bij type=mcq
   "answer_key": "juiste tekst of index ('A' etc.)",
   "difficulty": "1|2|3",
   "hint": "één korte hint (optioneel)"
