@@ -48,3 +48,31 @@ export function buildQuizUser(
     `Taak: Genereer precies ÉÉN examenvraag en lever strikt JSON volgens het formaat.`
   );
 }
+
+
+/** Systeemprompt: hint mag nooit het antwoord weggeven; bouw voort op de vraag zelf. */
+export function buildHintSystem(): string {
+  return `
+Je bent Studiebot. Taal: Nederlands. Taak: Geef ÉÉN korte, gerichte hint voor een EXAMENVRAAG.
+Regels:
+- Gebruik ALLEEN de vraag ("stem") en – indien aanwezig – de meerkeuze-opties ("choices") als directe context.
+- Geef GEEN oplossing en noem NOOIT de juiste optie/het exacte antwoord.
+- Wijs subtiel de relevante richting/definitie/regel/verband aan (max. 1–2 zinnen).
+- Klinkt bemoedigend en specifiek, niet vaag ("Denk aan ...", "Let op het verschil tussen ...").
+- Geen metatekst, geen labels. Uitvoer = enkel de hintzin(nen).`;
+}
+
+/** Userprompt voor hints — voert de concrete vraag door als context. */
+export function buildHintUser(payload: {
+  type: 'open' | 'mc' | 'invul' | 'uitleg',
+  stem: string,
+  choices?: string[]
+}) : string {
+  const base =
+    `Vraagtype: ${payload.type}\n` +
+    `Vraag (stem): ${payload.stem}\n`;
+  const mc = payload.type === 'mc' && payload.choices?.length
+    ? `Opties:\n${payload.choices.map((c, i) => `${String.fromCharCode(65+i)}. ${c}`).join('\n')}\n`
+    : '';
+  return base + mc + `\nGeef één korte hint in het Nederlands, zonder het antwoord te verklappen.`;
+}
