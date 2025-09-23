@@ -98,8 +98,16 @@ function attachUsageFields(target, resp, fallbackModel) {
   }
 }
 
-export async function srvGenerateHints({ topicId, text, currentBloom = 'remember', currentDifficulty = 'easy', wasCorrect = null, subject, grade, chapter }) {
-  const c = getClient();
+// Voeg hintFromQuestion aan de parameters toe:
+export async function srvGenerateHints({
+  topicId, text,
+  currentBloom = 'remember',
+  currentDifficulty = 'easy',
+  wasCorrect = null,
+  subject, grade, chapter,
+  hintFromQuestion = false              // << nieuw
+}) 
+{  const c = getClient();
   const ctx = await getContext({ subject, grade, chapter, topicId });
   if (!ctx.ok) {
     return { no_material: true, reason: ctx.reason, message: ctx.message, db_ok: ctx.db_ok, policy: { guardrail_triggered: false, reason: 'none' }, context_len: 0 };
@@ -117,16 +125,31 @@ export async function srvGenerateHints({ topicId, text, currentBloom = 'remember
 
     const { buildLearnSystem, buildLearnUser } = await import('../prompts');
     const system = buildLearnSystem();
-    const user = buildLearnUser(topicId || 'algemeen', text || '', ctx.text || '');
+      const user = buildLearnUser(
+    topicId || 'algemeen',
+    String(text || ''),
+    hintFromQuestion ? '' : (ctx.text || '')
+  );
 
     try {
-      const resp = await c.chat.completions.create({ model: MODELS.hints, temperature: 0.3, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+const resp = await c.chat.completions.create({
+  model: MODELS.hints,
+  temperature: 0.3,
+  max_tokens: 320, // voorkom length-cutoff
+  response_format: { type: 'json_object' },
+  messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+});
+      
       attachUsageFields(response, resp, MODELS.hints);
       const content = resp.choices?.[0]?.message?.content || '{}';
       const json = JSON.parse(content);
       response.hints = Array.isArray(json.hints) ? json.hints.slice(0, 3) : [];
-      response.tutor_message = String(json.tutor_message || '').slice(0, 200);
-      response.follow_up_question = String(json.follow_up_question || '').slice(0, 200);
+     response.tutor_message = String(json.tutor_message || '');
+if (response.tutor_message.length > 600) response.tutor_message = response.tutor_message.slice(0, 600) + '…';
+
+response.follow_up_question = String(json.follow_up_question || '');
+if (response.follow_up_question.length > 300) response.follow_up_question = response.follow_up_question.slice(0, 300) + '…';
+      
     } catch {
       response.hints = ['Lees de kernpunten en leg die in je eigen woorden uit.']; response.tutor_message = 'Goed bezig! Laten we de kern samenvatten.'; response.follow_up_question = 'Wat is volgens jou de hoofdboodschap?';
     }
@@ -145,13 +168,19 @@ export async function srvQuizGenerate({ topicId, objective, currentBloom = 'reme
     const system = buildQuizSystem();
     const user = buildQuizUser(topicId || 'algemeen', ctx.text || '', objective || 'algemeen');
     try {
-      const resp = await c.chat.completions.create({ model: MODELS.quiz, temperature: 0.4, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+const resp = await c.chat.completions.create({
+  model: MODELS.quiz,
+  temperature: 0.4,
+  max_tokens: 240, // iets lager dan Leren, maar ruim genoeg
+  response_format: { type: 'json_object' },
+  messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+});
       attachUsageFields(response, resp, MODELS.quiz);
       const content = resp.choices?.[0]?.message?.content || '{}';
       const json = JSON.parse(content);
       response.question_id = json.question_id || response.question_id;
       response.type = json.type || 'mcq';
-      response.stem = String(json.stem || '').slice(0, 500);
+      response.stem = String(json.stem || '').slice(0, 700);
       response.choices = Array.isArray(json.choices) ? json.choices.slice(0, 6) : [];
       response.answer_key = json.answer_key || response.answer_key;
       response.hint = json.hint && typeof json.hint === 'string' ? json.hint.slice(0, 200) : null;
