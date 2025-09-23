@@ -60,12 +60,12 @@ class GenerateHintsOut(BaseModel):
     @validator('tutor_message')
     def tutor_message_no_questions(cls, v):
         v = v.strip()
+        # Less aggressive question removal - only remove obvious ones
         if '?' in v:
-            # Remove question parts more aggressively
-            v = re.sub(r'\s*[A-Z][^.!?]*\?[^.!?]*', '', v)
-            v = re.sub(r'\?[^.!?]*', '', v)
+            # Only remove questions at the end
+            v = re.sub(r'\s*\?[^.!?]*$', '', v)
             v = v.strip()
-        if not v or len(v) < 5:
+        if not v or len(v) < 3:
             v = "Goed, laten we doorgaan."
         return v
 
