@@ -29,10 +29,9 @@ export async function POST(req) {
       );
     }
 
-    // Zorg dat het contract eenduidig is richting frontend:
     const payload = {
       question_id: res.question_id,
-      type: res.type,                          // 'mcq' | 'short_answer' | 'fill_in' | 'explain' (afhankelijk van jouw implementatie)
+      type: res.type,                                         // verwacht 'mcq' | 'short_answer' | 'fill_in' | 'explain'
       stem: res.stem,
       choices: Array.isArray(res.choices) ? res.choices.slice(0, 4) : undefined,
       answer_key: res.answer_key,
