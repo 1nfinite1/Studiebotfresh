@@ -1,1 +1,1 @@
-smok
+smoke
