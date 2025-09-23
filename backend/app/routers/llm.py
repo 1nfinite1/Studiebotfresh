@@ -376,33 +376,58 @@ async def generate_hints(
         else:
             data = {}
         
-        # Extract from processed data
+        # Extract from processed data with validation
         tutor_message = data.get("tutor_message", "Laten we verder gaan.")
         follow_up_data = data.get("follow_up_question", {})
         hint_data = data.get("hint")
         
-        # Create response objects
-        follow_up_question = FollowUpQuestion(
-            id=follow_up_data.get("id", str(uuid.uuid4())[:8]),
-            text=follow_up_data.get("text", "Wat denk je hierover?")
-        )
+        # Create response objects with enhanced validation
+        try:
+            follow_up_question = FollowUpQuestion(
+                id=follow_up_data.get("id", str(uuid.uuid4())[:8]),
+                text=follow_up_data.get("text", "Wat denk je hierover?")
+            )
+        except Exception as e:
+            # Fallback for invalid questions
+            print(f"Question validation failed: {e}, using fallback")
+            follow_up_question = FollowUpQuestion(
+                id=str(uuid.uuid4())[:8],
+                text="Wat vind je interessant aan dit onderwerp?"
+            )
         
         hint = None
         if hint_data and hint_data.get("text"):
-            hint = Hint(
-                for_question_id=hint_data.get("for_question_id", follow_up_question.id),
-                text=hint_data["text"]
-            )
+            try:
+                hint = Hint(
+                    for_question_id=hint_data.get("for_question_id", follow_up_question.id),
+                    text=hint_data["text"]
+                )
+            except Exception as e:
+                # Drop invalid hints rather than failing
+                print(f"Hint validation failed: {e}, dropping hint")
+                hint = None
         
         # Legacy hints field for backward compatibility
         legacy_hints = [hint.text] if hint else []
         
-        out = GenerateHintsOut(
-            tutor_message=tutor_message,
-            follow_up_question=follow_up_question,
-            hint=hint,
-            hints=legacy_hints
-        )
+        try:
+            out = GenerateHintsOut(
+                tutor_message=tutor_message,
+                follow_up_question=follow_up_question,
+                hint=hint,
+                hints=legacy_hints
+            )
+        except Exception as e:
+            # Ultimate fallback
+            print(f"Response validation failed: {e}, using minimal fallback")
+            out = GenerateHintsOut(
+                tutor_message="Laten we verder gaan.",
+                follow_up_question=FollowUpQuestion(
+                    id=str(uuid.uuid4())[:8],
+                    text="Wat wil je graag weten?"
+                ),
+                hints=[]
+            )
         
         response.headers["X-Studiebot-LLM"] = "enabled"
         _echo_emoji_mode(response, x_emoji_mode)
