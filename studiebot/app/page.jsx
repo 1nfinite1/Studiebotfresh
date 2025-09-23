@@ -331,6 +331,7 @@ function ChatPanel({ mode, context }) {
   const [loading, setLoading] = useState(false)
   const [showTyping, setShowTyping] = useState(false)
   const [lastAssistantMessage, setLastAssistantMessage] = useState('')
+  const [lastQuestionId, setLastQuestionId] = useState('')
   const listRef = useRef(null)
   const { fetchGlossary } = useGlossary()
   const GLOSSARY_ENABLED = process.env.NEXT_PUBLIC_GLOSSARY_ENABLED === 'true'
