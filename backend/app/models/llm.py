@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, validator
+import re
 
 
 class FollowUpQuestion(BaseModel):
@@ -7,12 +8,18 @@ class FollowUpQuestion(BaseModel):
     text: str
     
     @validator('text')
-    def text_must_be_question(cls, v):
-        if not v.strip().endswith('?'):
+    def text_must_be_complete_question(cls, v):
+        v = v.strip()
+        if not v.endswith('?'):
             raise ValueError('Follow-up question must end with ?')
-        if len(v.split()) > 20:  # ~15 words limit with some buffer
+        if len(v.split()) > 20:  # Stricter limit
             raise ValueError('Follow-up question too long (max ~15 words)')
-        return v.strip()
+        if len(v) < 10:
+            raise ValueError('Follow-up question too short')
+        # Check for incomplete sentences
+        if v.count(' ') < 2:
+            raise ValueError('Follow-up question seems incomplete')
+        return v
 
 
 class Hint(BaseModel):
@@ -21,13 +28,18 @@ class Hint(BaseModel):
     
     @validator('text')
     def text_must_be_single_sentence(cls, v):
-        # Count sentences by looking for sentence endings
-        sentence_count = len([s for s in v.split('.') if s.strip()]) + \
-                        len([s for s in v.split('!') if s.strip()]) + \
-                        len([s for s in v.split('?') if s.strip()])
-        if sentence_count > 2:  # Allow some flexibility
-            raise ValueError('Hint must be one sentence maximum')
-        return v.strip()
+        v = v.strip()
+        if not v:
+            raise ValueError('Hint cannot be empty')
+        if len(v.split()) > 25:  # Stricter word limit
+            raise ValueError('Hint too long (max ~20 words)')
+        # Check for multiple sentences
+        sentence_endings = len(re.findall(r'[.!?]', v))
+        if sentence_endings > 1:
+            raise ValueError('Hint must be exactly one sentence')
+        if not any(v.endswith(ending) for ending in ['.', '!', '?']):
+            v += '.'  # Auto-complete sentence
+        return v
 
 
 class GenerateHintsIn(BaseModel):
@@ -39,7 +51,7 @@ class GenerateHintsIn(BaseModel):
 
 
 class GenerateHintsOut(BaseModel):
-    tutor_message: str = Field(..., max_length=400)  # ~80 words max
+    tutor_message: str = Field(..., max_length=200)  # ~50 words max
     follow_up_question: FollowUpQuestion
     hint: Optional[Hint] = None
     notice: Optional[str] = None
@@ -49,9 +61,15 @@ class GenerateHintsOut(BaseModel):
     
     @validator('tutor_message')
     def tutor_message_no_questions(cls, v):
+        v = v.strip()
         if '?' in v:
-            raise ValueError('tutor_message must not contain questions')
-        return v.strip()
+            # Remove question parts more aggressively
+            v = re.sub(r'\s*[A-Z][^.!?]*\?[^.!?]*', '', v)
+            v = re.sub(r'\?[^.!?]*', '', v)
+            v = v.strip()
+        if not v or len(v) < 5:
+            v = "Goed, laten we doorgaan."
+        return v
 
 
 class GradeQuizIn(BaseModel):
