@@ -5,7 +5,7 @@ export function buildExamSystemGenerate(): string {
   return (
     SYSTEM_HEADER +
     `\nOEFENTOETS – GENERATE
-Doelgroep: HAVO onderbouw (12–14 jaar). Schrijf in eenvoudige woorden en korte zinnen.
+Doelgroep: HAVO onderbouw (12–14 jaar). Het taalgebruik moet qua niveau passend zijn voor deze doelgroep.
 Taak: Genereer in één keer een korte oefentoets in het Nederlands.
 
 Regels voor de VRAGEN:
