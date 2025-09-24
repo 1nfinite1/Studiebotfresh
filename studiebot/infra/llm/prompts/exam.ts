@@ -1,5 +1,19 @@
 import { SYSTEM_HEADER } from './learn';
 
+// in buildExamSystemGenerate():
+return (
+  SYSTEM_HEADER +
+  `\nDoelgroep: HAVO onderbouw (12–14 jaar). Schrijf in eenvoudige woorden en korte zinnen.\n` +   // <== DIAGNOSE-LIJN
+  `\nOEFENTOETS – GENERATE
+  ...`);
+
+// in buildExamSystemGrade():
+return (
+  SYSTEM_HEADER +
+  `\nDoelgroep: HAVO onderbouw (12–14 jaar). Beoordeel mild; synoniemen en korte eigen formuleringen kunnen ook correct zijn.\n` + // <== DIAGNOSE-LIJN
+  `\nOEFENTOETS – SUBMIT/NAKIJKEN
+  ...`);
+
 export function buildExamSystemGenerate(): string {
   return (
     SYSTEM_HEADER +
