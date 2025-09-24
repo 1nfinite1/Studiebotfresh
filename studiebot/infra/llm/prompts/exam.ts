@@ -1,23 +1,28 @@
 import { SYSTEM_HEADER } from './learn';
 
-// in buildExamSystemGenerate():
-return (
-  SYSTEM_HEADER +
-  `\nDoelgroep: HAVO onderbouw (12–14 jaar). Schrijf in eenvoudige woorden en korte zinnen.\n` +   // <== DIAGNOSE-LIJN
-  `\nOEFENTOETS – GENERATE
-  ...`);
-
-// in buildExamSystemGrade():
-return (
-  SYSTEM_HEADER +
-  `\nDoelgroep: HAVO onderbouw (12–14 jaar). Beoordeel mild; synoniemen en korte eigen formuleringen kunnen ook correct zijn.\n` + // <== DIAGNOSE-LIJN
-  `\nOEFENTOETS – SUBMIT/NAKIJKEN
-  ...`);
-
 export function buildExamSystemGenerate(): string {
   return (
     SYSTEM_HEADER +
-    `\nOEFENTOETS – GENERATE\nTaak: Genereer in één keer een korte oefentoets in het Nederlands.\nRegels:\n- 5 vragen (of 10 indien gevraagd).\n- Mix: ≥2 korte open vragen, ≥1 meerkeuze (A–D), ≥1 leg/verklaar.\n- Nummer de vragen.\n- GEEN antwoorden meeleveren.\n\nUitvoer in JSON: questions[] met question_id, type, stem, choices (indien meerkeuze), answer_key (optioneel lege placeholders).`);
+    `\nOEFENTOETS – GENERATE
+Doelgroep: HAVO onderbouw (12–14 jaar). Schrijf in eenvoudige woorden en korte zinnen.
+Taak: Genereer in één keer een korte oefentoets in het Nederlands.
+
+Regels voor de VRAGEN:
+- Aantal: 5 (of 10 indien gevraagd).
+- Mix: ≥2 korte open vragen, ≥1 meerkeuze (A–D), ≥1 leg/verklaar.
+- Eén leerdoel per vraag; korte, duidelijke zinnen (≤ ~18 woorden).
+- Types toegestaan: "mcq" (meerkeuze), "short_answer", "fill_in".
+- Gebruik **exact** "mcq" voor meerkeuze.
+- Bij type="mcq": lever **altijd** precies vier opties mee in "choices": ["A ...","B ...","C ...","D ..."].
+- **Geen antwoord/solution meeleveren = géén "answer_key".** De **opties A–D horen er wél bij**.
+- Nummer de vragen.
+
+Uitvoer in JSON: questions[] met
+- question_id, type ("mcq" | "short_answer" | "fill_in"),
+- stem,
+- choices (alleen bij "mcq"; precies 4),
+- answer_key (weglaten of lege placeholder).`
+  );
 }
 
 export function buildExamUserGenerate(segmentsText: string, total: number): string {
@@ -28,7 +33,16 @@ export function buildExamUserGenerate(segmentsText: string, total: number): stri
 export function buildExamSystemGrade(): string {
   return (
     SYSTEM_HEADER +
-    `\nOEFENTOETS – SUBMIT/NAKIJKEN\nTaak: Beoordeel het antwoord kort en helder, op basis van de context.\nRegels:\n- Geef JSON met: is_correct (bool), score (0..1), explanation (1–3 korte NL-zinnen), model_answer (compact NL antwoord).\n- Wees warm en bemoedigend; geen metatekst.\n- Gebruik alleen de context; geen speculatie buiten de stof.\n`);
+    // ▶︎ Diagnose-regel: mild nakijken, synoniemen/eigen formuleringen tellen mee
+    `\nDoelgroep: HAVO onderbouw (12–14 jaar). Beoordeel mild; synoniemen en korte eigen formuleringen kunnen ook correct zijn.\n` +
+    `\nOEFENTOETS – SUBMIT/NAKIJKEN
+Taak: Beoordeel het antwoord kort en helder, op basis van de context.
+Regels:
+- Geef JSON met: is_correct (bool), score (0..1), explanation (1–3 korte NL-zinnen), model_answer (compact NL antwoord).
+- Wees warm en bemoedigend; geen metatekst.
+- Gebruik alleen de context; geen speculatie buiten de stof.
+`
+  );
 }
 
 export function buildExamUserGrade(segmentsText: string, question: string, student: string): string {
