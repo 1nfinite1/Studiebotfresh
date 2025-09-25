@@ -35,9 +35,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
             <span>{readingTime} min</span>
           </div>
         </div>
-      </CardHeader>
+      </TypedCardHeader>
       
-      <CardContent className="p-6 space-y-4" data-testid="article-content">
+      <TypedCardContent className="p-6 space-y-4" data-testid="article-content">
         {article.paragraphs.map((paragraph, index) => (
           <p 
             key={index} 
