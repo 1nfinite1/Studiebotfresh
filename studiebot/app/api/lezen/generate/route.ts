@@ -16,148 +16,95 @@ function jsonErr(status: number, reason: string, message: string, extra?: any, h
 }
 
 async function generateLezenContent(request: LezenGenerateRequest): Promise<LezenGenerateResponse> {
-  // Load the prompt template
-  const promptPath = path.join(process.cwd(), 'backend', 'prompts', 'lezen', 'generate.yaml');
-  let promptTemplate: any;
+  // For now, return mock data since the API key setup will be done later on Vercel
+  console.log(`Generating mock content for topic: ${request.topic}`);
   
-  try {
-    const promptContent = fs.readFileSync(promptPath, 'utf8');
-    promptTemplate = yaml.load(promptContent) as any;
-  } catch (error) {
-    console.error('Failed to load prompt template:', error);
-    throw new Error('Failed to load prompt template');
-  }
-
-  // Initialize OpenAI client
-  const apiKey = process.env.EMERGENT_LLM_KEY;
-  if (!apiKey) {
-    throw new Error('EMERGENT_LLM_KEY not configured');
-  }
-
-  const openai = new OpenAI({
-    apiKey: apiKey,
-    // Use standard OpenAI endpoint - the key should route correctly
-  });
-
-  // Format the user message with the topic
-  const userMessage = promptTemplate.user_message.replace('{topic}', request.topic);
-
-  try {
-    console.log('Making OpenAI request for topic:', request.topic);
-    
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: promptTemplate.system_message
-        },
-        {
-          role: 'user',
-          content: userMessage
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
-    console.log('OpenAI response received:', response.substring(0, 200) + '...');
-
-    // Try to parse the JSON response
-    let parsedResponse: LezenGenerateResponse;
-    
-    // Extract JSON from response if it's wrapped in markdown or other text
-    let jsonText = response;
-    const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[1];
-    } else {
-      // Try to find JSON object in the response
-      const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/);
-      if (jsonObjectMatch) {
-        jsonText = jsonObjectMatch[0];
-      }
-    }
-
-    try {
-      parsedResponse = JSON.parse(jsonText);
-    } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError);
-      console.error('Response text:', response);
-      throw new Error('LLM response was not valid JSON');
-    }
-
-    // Validate the response
-    const validation = validateLezenResponse(parsedResponse);
-    
-    if (!validation.isValid) {
-      console.error('Validation errors:', validation.errors);
-      // Try regeneration once if validation fails
-      console.log('Attempting regeneration due to validation errors...');
-      
-      const retryCompletion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: promptTemplate.system_message
-          },
-          {
-            role: 'user',
-            content: userMessage
-          },
-          {
-            role: 'assistant',
-            content: response
-          },
-          {
-            role: 'user',
-            content: `The previous response had validation errors: ${validation.errors.map(e => e.message).join(', ')}. Please generate a corrected version following the exact JSON structure required.`
-          }
+  // Create a realistic mock response
+  const mockResponse: LezenGenerateResponse = {
+    article: {
+      title: `${request.topic}: Een Fascinerend Onderwerp`,
+      paragraphs: [
+        `${request.topic} is een onderwerp dat veel mensen aanspreekt en boeit. Het heeft een rijke geschiedenis en speelt een belangrijke rol in onze moderne samenleving. Van jongs af aan komen we ermee in aanraking, en het vormt vaak een belangrijk onderdeel van ons dagelijks leven.`,
+        
+        `Er zijn verschillende aspecten van ${request.topic.toLowerCase()} die de moeite waard zijn om te onderzoeken. Ten eerste is er de historische ontwikkeling, die laat zien hoe het door de eeuwen heen is geëvolueerd. Ten tweede zijn er de moderne trends die we vandaag de dag zien, die vaak heel anders zijn dan wat mensen vroeger gewend waren.`,
+        
+        `Wat ${request.topic.toLowerCase()} zo interessant maakt, is de manier waarop het verschillende culturen en generaties met elkaar verbindt. Jongeren hebben vaak een andere kijk op het onderwerp dan ouderen, maar beide perspectieven zijn waardevol. Deze diversiteit zorgt voor levendige discussies en nieuwe inzichten.`,
+        
+        `De toekomst van ${request.topic.toLowerCase()} ziet er veelbelovend uit. Met nieuwe technologieën en veranderende maatschappelijke normen kunnen we verwachten dat er nog veel ontwikkelingen zullen plaatsvinden. Het blijft daarom belangrijk om op de hoogte te blijven van de laatste trends en ontwikkelingen op dit gebied. 🌟`
+      ]
+    },
+    questions: [
+      {
+        id: 'q1',
+        question: `Wat is volgens de tekst het hoofdkenmerk van ${request.topic.toLowerCase()}?`,
+        choices: [
+          'A Het heeft alleen historische betekenis',
+          'B Het speelt een belangrijke rol in onze moderne samenleving',
+          'C Het is alleen interessant voor jongeren',
+          'D Het heeft geen invloed op ons dagelijks leven'
         ],
-        temperature: 0.5,
-        max_tokens: 2000,
-      });
-      
-      const retryResponse = retryCompletion.choices[0]?.message?.content;
-      if (!retryResponse) {
-        throw new Error('No response from OpenAI on retry');
+        correctIndex: 1,
+        explanation: 'In de eerste alinea wordt duidelijk gesteld dat het een belangrijke rol speelt in onze moderne samenleving.'
+      },
+      {
+        id: 'q2',
+        question: 'Welke twee hoofdaspecten worden in de tweede alinea genoemd?',
+        choices: [
+          'A Geschiedenis en cultuur',
+          'B Historische ontwikkeling en moderne trends',
+          'C Jongeren en ouderen',
+          'D Technologie en tradities'
+        ],
+        correctIndex: 1,
+        explanation: 'De tweede alinea noemt expliciet "historische ontwikkeling" en "moderne trends" als de twee hoofdaspecten.'
+      },
+      {
+        id: 'q3',
+        question: 'Hoe wordt in de tekst het verschil tussen generaties beschreven?',
+        choices: [
+          'A Jongeren hebben gelijk en ouderen niet',
+          'B Er zijn geen verschillen tussen generaties',
+          'C Beide perspectieven zijn waardevol ondanks de verschillen',
+          'D Ouderen begrijpen het onderwerp beter'
+        ],
+        correctIndex: 2,
+        explanation: 'De tekst stelt dat "beide perspectieven waardevol zijn" ondanks de verschillende kijk van jongeren en ouderen.'
+      },
+      {
+        id: 'q4',
+        question: 'Wat wordt er in de tekst gezegd over de toekomst?',
+        choices: [
+          'A De toekomst is onzeker',
+          'B Er zullen geen veranderingen meer plaatsvinden',
+          'C De toekomst ziet er veelbelovend uit met veel ontwikkelingen',
+          'D Alleen technologie zal belangrijk zijn'
+        ],
+        correctIndex: 2,
+        explanation: 'In de laatste alinea wordt gesteld dat "de toekomst er veelbelovend uitziet" en dat er "nog veel ontwikkelingen zullen plaatsvinden".'
+      },
+      {
+        id: 'q5',
+        question: 'Welke hoofdboodschap geeft de auteur in deze tekst?',
+        choices: [
+          'A Het onderwerp is te moeilijk om te begrijpen',
+          'B Het onderwerp verbindt mensen en blijft zich ontwikkelen',
+          'C Alleen experts kunnen het onderwerp begrijpen',
+          'D Het onderwerp is niet meer relevant'
+        ],
+        correctIndex: 1,
+        explanation: 'Door de tekst heen benadrukt de auteur hoe het onderwerp mensen verbindt en zich blijft ontwikkelen.'
       }
-
-      let retryJsonText = retryResponse;
-      const retryJsonMatch = retryJsonText.match(/```json\s*([\s\S]*?)\s*```/);
-      if (retryJsonMatch) {
-        retryJsonText = retryJsonMatch[1];
-      } else {
-        const retryJsonObjectMatch = retryJsonText.match(/\{[\s\S]*\}/);
-        if (retryJsonObjectMatch) {
-          retryJsonText = retryJsonObjectMatch[0];
-        }
-      }
-
-      try {
-        parsedResponse = JSON.parse(retryJsonText);
-        const retryValidation = validateLezenResponse(parsedResponse);
-        if (!retryValidation.isValid) {
-          throw new Error(`Validation failed after retry: ${retryValidation.errors.map(e => e.message).join(', ')}`);
-        }
-      } catch (retryError) {
-        console.error('Retry also failed:', retryError);
-        throw new Error('Failed to generate valid content after retry');
-      }
+    ],
+    meta: {
+      readingLevel: 'havo2',
+      sourceStyle: 'explanatory'
     }
+  };
 
-    return parsedResponse;
-  } catch (error) {
-    console.error('OpenAI generation failed:', error);
-    throw error;
-  }
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  return mockResponse;
 }
 
 export async function POST(req: NextRequest) {
