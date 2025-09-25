@@ -1,5 +1,5 @@
-"// @ts-nocheck
-"use client""
+// @ts-nocheck
+"use client"
 
 import React from 'react'
 import { Button } from './ui/button'
