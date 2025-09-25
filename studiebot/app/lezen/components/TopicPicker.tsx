@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { LEZEN_ALL_TOPICS } from '../../../lib/types/lezen';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
+
+// Type assertion for JSX components
+const TypedButton = Button as any;
+const TypedInput = Input as any;
 import { Search, BookOpen } from 'lucide-react';
 
 interface TopicPickerProps {
