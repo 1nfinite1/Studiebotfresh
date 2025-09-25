@@ -5,9 +5,7 @@ import { validateLezenResponse } from '../../../../backend/lezen/validate';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-
-// Import emergentintegrations for LLM
-const { LlmChat, UserMessage } = require('emergentintegrations/llm/chat');
+import OpenAI from 'openai';
 
 function jsonOk(data: any, headers?: Record<string, string>, status = 200) {
   return NextResponse.json({ ok: true, ...data }, { status, headers });
@@ -30,28 +28,46 @@ async function generateLezenContent(request: LezenGenerateRequest): Promise<Leze
     throw new Error('Failed to load prompt template');
   }
 
-  // Initialize LLM client with emergentintegrations
+  // Initialize OpenAI client
   const apiKey = process.env.EMERGENT_LLM_KEY;
   if (!apiKey) {
     throw new Error('EMERGENT_LLM_KEY not configured');
   }
 
-  const sessionId = `lezen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  const chat = new LlmChat({
-    api_key: apiKey,
-    session_id: sessionId,
-    system_message: promptTemplate.system_message
-  }).with_model('openai', 'gpt-4o-mini');
-
-  // Format the user message with the topic
-  const userMessage = new UserMessage({
-    text: promptTemplate.user_message.replace('{topic}', request.topic)
+  const openai = new OpenAI({
+    apiKey: apiKey,
+    baseURL: 'https://api.emergentmind.com/v1', // Use emergent endpoint
   });
 
+  // Format the user message with the topic
+  const userMessage = promptTemplate.user_message.replace('{topic}', request.topic);
+
   try {
-    const response = await chat.send_message(userMessage);
-    console.log('LLM Response:', response);
+    console.log('Making OpenAI request for topic:', request.topic);
+    
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: promptTemplate.system_message
+        },
+        {
+          role: 'user',
+          content: userMessage
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('OpenAI response received:', response.substring(0, 200) + '...');
 
     // Try to parse the JSON response
     let parsedResponse: LezenGenerateResponse;
@@ -83,11 +99,37 @@ async function generateLezenContent(request: LezenGenerateRequest): Promise<Leze
     if (!validation.isValid) {
       console.error('Validation errors:', validation.errors);
       // Try regeneration once if validation fails
-      const retryMessage = new UserMessage({
-        text: `The previous response had validation errors: ${validation.errors.map(e => e.message).join(', ')}. Please generate a corrected version following the exact JSON structure required.`
+      console.log('Attempting regeneration due to validation errors...');
+      
+      const retryCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: promptTemplate.system_message
+          },
+          {
+            role: 'user',
+            content: userMessage
+          },
+          {
+            role: 'assistant',
+            content: response
+          },
+          {
+            role: 'user',
+            content: `The previous response had validation errors: ${validation.errors.map(e => e.message).join(', ')}. Please generate a corrected version following the exact JSON structure required.`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 2000,
       });
       
-      const retryResponse = await chat.send_message(retryMessage);
+      const retryResponse = retryCompletion.choices[0]?.message?.content;
+      if (!retryResponse) {
+        throw new Error('No response from OpenAI on retry');
+      }
+
       let retryJsonText = retryResponse;
       const retryJsonMatch = retryJsonText.match(/```json\s*([\s\S]*?)\s*```/);
       if (retryJsonMatch) {
@@ -113,7 +155,7 @@ async function generateLezenContent(request: LezenGenerateRequest): Promise<Leze
 
     return parsedResponse;
   } catch (error) {
-    console.error('LLM generation failed:', error);
+    console.error('OpenAI generation failed:', error);
     throw error;
   }
 }
