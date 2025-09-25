@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { LezenQuestion, LezenAnswerState, LezenFeedback } from '../../../lib/types/lezen';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button.jsx';
 import { CheckCircle, XCircle, ChevronDown, ChevronUp, Trophy, Target, BookOpen } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../components/ui/collapsible.jsx';
