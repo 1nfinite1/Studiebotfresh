@@ -5,18 +5,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
+import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
+interface MCQListProps {
+  questions: LezenQuestion[];
+  answers: LezenAnswerState;
+  onAnswerChange: (questionId: string, choiceIndex: number) => void;
+  onAllAnswered?: () => void;
 }
 
 export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: MCQListProps) {
   const [collapsedQuestions, setCollapsedQuestions] = useState<Set<string>>(new Set());
   const questionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // Check if all questions are answered
   const allAnswered = questions.every(q => answers[q.id] !== undefined);
   const answeredCount = Object.keys(answers).length;
 
-  // Auto-focus next question when one is answered
   useEffect(() => {
     if (answeredCount > 0 && answeredCount < questions.length) {
       const nextUnanswered = questions.find(q => answers[q.id] === undefined);
@@ -36,7 +40,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
   const handleAnswerSelect = (questionId: string, choiceIndex: number) => {
     onAnswerChange(questionId, choiceIndex);
     
-    // Collapse the question after answering
     setTimeout(() => {
       setCollapsedQuestions(prev => new Set(prev).add(questionId));
     }, 500);
@@ -61,7 +64,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
 
   return (
     <div className="space-y-4" data-testid="mcq-list">
-      {/* Progress Header */}
       <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm ring-1 ring-white/20">
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
@@ -80,7 +82,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
         </div>
       </div>
 
-      {/* Questions */}
       {questions.map((question, index) => {
         const isAnswered = answers[question.id] !== undefined;
         const isCollapsed = collapsedQuestions.has(question.id);
@@ -98,7 +99,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
             data-testid={`question-card-${question.id}`}
           >
             <CardContent className="p-0">
-              {/* Question Header - Always Visible */}
               <div 
                 className={`p-4 cursor-pointer transition-colors ${
                   isAnswered ? 'bg-green-100/50' : 'hover:bg-purple-50'
@@ -146,7 +146,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                 </div>
               </div>
 
-              {/* Question Content - Collapsible */}
               {(!isAnswered || !isCollapsed) && (
                 <div className="px-4 pb-4 space-y-3" data-testid={`question-choices-${question.id}`}>
                   {question.choices.map((choice, choiceIndex) => {
@@ -190,7 +189,6 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
         );
       })}
 
-      {/* Completion Message */}
       {allAnswered && (
         <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
           <div className="text-green-700 text-lg font-semibold mb-2">

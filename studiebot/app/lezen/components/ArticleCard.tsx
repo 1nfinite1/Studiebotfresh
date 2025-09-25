@@ -4,9 +4,13 @@
 import React from 'react';
 import { LezenArticle } from '../../../lib/types/lezen';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { FileText, Clock } from 'lucide-react';
+
+interface ArticleCardProps {
+  article: LezenArticle;
+}
 
 export function ArticleCard({ article }: ArticleCardProps) {
-  // Calculate estimated reading time (Dutch average: ~200 words per minute)
   const totalWords = article.paragraphs.join(' ').split(/\s+/).filter(word => word.length > 0).length;
   const readingTime = Math.ceil(totalWords / 200);
 
@@ -38,7 +42,6 @@ export function ArticleCard({ article }: ArticleCardProps) {
           </p>
         ))}
         
-        {/* Reading progress indicator */}
         <div className="mt-6 pt-4 border-t border-purple-100">
           <div className="flex items-center gap-2 text-sm text-purple-600">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
