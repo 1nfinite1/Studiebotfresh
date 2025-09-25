@@ -7,9 +7,9 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 
 // Type assertion for JSX components
-const TypedCard = Card as any;
-const TypedCardContent = CardContent as any;
-const TypedButton = Button as any;
+const Card = Card as any;
+const CardContent = CardContent as any;
+const Button = Button as any;
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 interface MCQListProps {
@@ -98,7 +98,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
         const selectedChoice = answers[question.id];
 
         return (
-          <TypedCard 
+          <Card 
             key={question.id}
             ref={el => questionRefs.current[question.id] = el}
             className={`transition-all duration-300 ${
@@ -108,7 +108,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
             }`}
             data-testid={`question-card-${question.id}`}
           >
-            <TypedCardContent className="p-0">
+            <CardContent className="p-0">
               {/* Question Header - Always Visible */}
               <div 
                 className={`p-4 cursor-pointer transition-colors ${
@@ -145,14 +145,14 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                   </div>
                   
                   {isAnswered && (
-                    <TypedButton 
+                    <Button 
                       variant="ghost" 
                       size="sm"
                       className="shrink-0 text-gray-500 hover:text-gray-700"
                       data-testid={`toggle-question-${question.id}`}
                     >
                       {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                    </TypedButton>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -191,13 +191,13 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                             {choice.replace(/^[A-D]\s*/, '')}
                           </span>
                         </div>
-                      </TypedButton>
+                      </Button>
                     );
                   })}
                 </div>
               )}
-            </TypedCardContent>
-          </TypedCard>
+            </CardContent>
+          </Card>
         );
       })}
 

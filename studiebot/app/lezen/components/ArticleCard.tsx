@@ -6,10 +6,10 @@ import { LezenArticle } from '../../../lib/types/lezen';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 
 // Type assertion for JSX components
-const TypedCard = Card as any;
-const TypedCardHeader = CardHeader as any;
-const TypedCardContent = CardContent as any;
-const TypedCardTitle = CardTitle as any;
+const Card = Card as any;
+const CardHeader = CardHeader as any;
+const CardContent = CardContent as any;
+const CardTitle = CardTitle as any;
 import { FileText, Clock } from 'lucide-react';
 
 interface ArticleCardProps {
@@ -22,23 +22,23 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const readingTime = Math.ceil(totalWords / 200);
 
   return (
-    <TypedCard className="bg-white shadow-lg border-0 overflow-hidden" data-testid="article-card">
-      <TypedCardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white pb-4">
+    <Card className="bg-white shadow-lg border-0 overflow-hidden" data-testid="article-card">
+      <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-purple-200" />
-            <TypedCardTitle className="text-xl font-bold leading-tight" data-testid="article-title">
+            <CardTitle className="text-xl font-bold leading-tight" data-testid="article-title">
               {article.title}
-            </TypedCardTitle>
+            </CardTitle>
           </div>
           <div className="flex items-center gap-1 bg-white/20 rounded-full px-3 py-1 text-sm font-medium shrink-0">
             <Clock className="h-4 w-4" />
             <span>{readingTime} min</span>
           </div>
         </div>
-      </TypedCardHeader>
+      </CardHeader>
       
-      <TypedCardContent className="p-6 space-y-4" data-testid="article-content">
+      <CardContent className="p-6 space-y-4" data-testid="article-content">
         {article.paragraphs.map((paragraph, index) => (
           <p 
             key={index} 
@@ -58,7 +58,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
             </span>
           </div>
         </div>
-      </TypedCardContent>
-    </TypedCard>
+      </CardContent>
+    </Card>
   );
 }

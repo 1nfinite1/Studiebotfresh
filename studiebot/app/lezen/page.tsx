@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 // Type assertion for JSX components  
-const TypedButton = Button as any;
+const Button = Button as any;
 
 type SessionPhase = 'topic-selection' | 'reading-questions' | 'results';
 
@@ -118,7 +118,7 @@ export default function LezenPage() {
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Terug naar onderwerpen
-            </TypedButton>
+            </Button>
           )}
         </div>
 
@@ -134,7 +134,7 @@ export default function LezenPage() {
               className="mt-2 border-red-300 text-red-800 hover:bg-red-50"
             >
               Probeer opnieuw
-            </TypedButton>
+            </Button>
           </div>
         )}
 

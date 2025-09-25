@@ -7,8 +7,8 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 
 // Type assertion for JSX components
-const TypedButton = Button as any;
-const TypedInput = Input as any;
+const Button = Button as any;
+const Input = Input as any;
 import { Search, BookOpen } from 'lucide-react';
 
 interface TopicPickerProps {
@@ -54,7 +54,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
               data-testid={`topic-button-${topic.toLowerCase().replace(/\s+/g, '-')}`}
             >
               {topic}
-            </TypedButton>
+            </Button>
           ))}
         </div>
       </div>
@@ -89,7 +89,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
             ) : (
               'Genereer tekst'
             )}
-          </TypedButton>
+          </Button>
         </form>
       </div>
 
