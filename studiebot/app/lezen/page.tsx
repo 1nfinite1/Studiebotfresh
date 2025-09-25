@@ -117,7 +117,7 @@ export default function LezenPage() {
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Terug naar onderwerpen
-            </Button>
+            </TypedButton>
           )}
         </div>
 
@@ -133,7 +133,7 @@ export default function LezenPage() {
               className="mt-2 border-red-300 text-red-800 hover:bg-red-50"
             >
               Probeer opnieuw
-            </Button>
+            </TypedButton>
           </div>
         )}
 
