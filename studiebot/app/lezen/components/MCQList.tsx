@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button.jsx';
+import { Button } from '../../../components/ui/button';
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 interface MCQListProps {
