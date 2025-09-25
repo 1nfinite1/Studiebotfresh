@@ -2,12 +2,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LezenQuestion, LezenAnswerState, LezenFeedback } from '../../../lib/types/lezen';
+import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { CheckCircle, XCircle, ChevronDown, ChevronUp, Trophy, Target, BookOpen } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../components/ui/collapsible';
 
+interface ResultSummaryProps {
   questions: LezenQuestion[];
   answers: LezenAnswerState;
   onNewSession: () => void;
@@ -16,7 +17,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../co
 export function ResultSummary({ questions, answers, onNewSession }: ResultSummaryProps) {
   const [openQuestions, setOpenQuestions] = useState<Set<string>>(new Set());
 
-  // Calculate results
   const results = questions.map(question => {
     const userAnswerIndex = answers[question.id];
     const isCorrect = userAnswerIndex === question.correctIndex;
@@ -65,7 +65,6 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
 
   return (
     <div className="space-y-6" data-testid="results-summary">
-      {/* Overall Score Card */}
       <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
         <CardHeader className="text-center pb-3">
           <div className="flex items-center justify-center mb-2">
@@ -114,7 +113,6 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
         </CardContent>
       </Card>
 
-      {/* Question Details */}
       <Card className="shadow-lg border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
