@@ -5,7 +5,14 @@ import React, { useState } from 'react';
 import { LEZEN_ALL_TOPICS } from '../../../lib/types/lezen';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
+import { Search, BookOpen } from 'lucide-react';
 
+interface TopicPickerProps {
+  onTopicSelect: (topic: string) => void;
+  isGenerating: boolean;
+}
+
+export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const [customTopic, setCustomTopic] = useState('');
 
   const handleCustomSubmit = (e: React.FormEvent) => {
@@ -18,7 +25,6 @@ import { Input } from '../../../components/ui/input';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2 mb-4">
           <BookOpen className="h-6 w-6 text-amber-400" />
@@ -29,7 +35,6 @@ import { Input } from '../../../components/ui/input';
         </p>
       </div>
 
-      {/* Topic Grid */}
       <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm ring-1 ring-white/20">
         <h3 className="text-white font-semibold mb-4 text-center">Populaire onderwerpen</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -48,7 +53,6 @@ import { Input } from '../../../components/ui/input';
         </div>
       </div>
 
-      {/* Custom Topic Input */}
       <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm ring-1 ring-white/20">
         <h3 className="text-white font-semibold mb-4 text-center">Of voer je eigen onderwerp in</h3>
         <form onSubmit={handleCustomSubmit} className="space-y-4">
