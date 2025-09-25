@@ -29,13 +29,13 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
     const rows = [];
     let currentIndex = 0;
 
-    // Define row sizes and offsets to create variety
+    // Define row sizes and smaller, safer offsets to prevent overflow
     const rowConfigs = [
-      { size: 4, offset: 'ml-0' },
-      { size: 3, offset: 'ml-12' },
-      { size: 5, offset: 'ml-4' },
-      { size: 4, offset: 'ml-8' },
-      { size: 4, offset: 'ml-2' }
+      { size: 4, offset: '' },
+      { size: 3, offset: 'ml-6' },
+      { size: 5, offset: 'ml-2' },
+      { size: 4, offset: 'ml-4' },
+      { size: 4, offset: 'ml-1' }
     ];
 
     rowConfigs.forEach((config, rowIndex) => {
