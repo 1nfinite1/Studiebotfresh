@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { LEZEN_ALL_TOPICS } from '../../../lib/types/lezen';
-import { Button } from '../../../components/ui/button.jsx';
-import { Input } from '../../../components/ui/input.jsx';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
 import { Search, BookOpen } from 'lucide-react';
 
 interface TopicPickerProps {
