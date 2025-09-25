@@ -76,16 +76,16 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
   return (
     <div className="space-y-6" data-testid="results-summary">
       {/* Overall Score Card */}
-      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
-        <CardHeader className="text-center pb-3">
+      <TypedCard className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
+        <TypedCardHeader className="text-center pb-3">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-8 w-8 text-yellow-500 mr-2" />
-            <CardTitle className="text-2xl font-bold text-purple-900">
+            <TypedCardTitle className="text-2xl font-bold text-purple-900">
               Jouw Resultaat
-            </CardTitle>
+            </TypedCardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
+        </TypedCardHeader>
+        <TypedCardContent className="text-center space-y-4">
           <div className="flex items-center justify-center gap-8">
             <div className="text-center">
               <div className={`text-4xl font-bold ${getScoreColor(percentage)}`}>
@@ -120,26 +120,26 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
           >
             <BookOpen className="h-4 w-4 mr-2" />
             Nieuwe tekst en vragen
-          </Button>
-        </CardContent>
-      </Card>
+          </TypedButton>
+        </TypedCardContent>
+      </TypedCard>
 
       {/* Question Details */}
-      <Card className="shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
+      <TypedCard className="shadow-lg border-0">
+        <TypedCardHeader>
+          <TypedCardTitle className="flex items-center gap-2 text-xl">
             <Target className="h-5 w-5 text-purple-600" />
             Uitgebreide feedback per vraag
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+          </TypedCardTitle>
+        </TypedCardHeader>
+        <TypedCardContent className="space-y-3">
           {results.map((result, index) => (
             <Collapsible
               key={result.question.id}
               open={openQuestions.has(result.question.id)}
               onOpenChange={() => toggleQuestion(result.question.id)}
             >
-              <CollapsibleTrigger asChild>
+              <TypedCollapsibleTrigger asChild>
                 <Button
                   variant="outline"
                   className="w-full justify-between p-4 h-auto hover:bg-purple-50 border-purple-200"
@@ -163,10 +163,10 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
                     <ChevronUp className="h-4 w-4 text-purple-600" /> : 
                     <ChevronDown className="h-4 w-4 text-purple-600" />
                   }
-                </Button>
-              </CollapsibleTrigger>
+                </TypedButton>
+              </TypedCollapsibleTrigger>
               
-              <CollapsibleContent className="px-4 pb-4 pt-2">
+              <TypedCollapsibleContent className="px-4 pb-4 pt-2">
                 <div className="space-y-4 border-l-4 border-purple-200 pl-4 ml-2">
                   <div>
                     <h4 className="font-semibold text-purple-900 mb-2">Vraag:</h4>
@@ -209,11 +209,11 @@ export function ResultSummary({ questions, answers, onNewSession }: ResultSummar
                     </div>
                   </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              </TypedCollapsibleContent>
+            </TypedCollapsible>
           ))}
-        </CardContent>
-      </Card>
+        </TypedCardContent>
+      </TypedCard>
     </div>
   );
 }
