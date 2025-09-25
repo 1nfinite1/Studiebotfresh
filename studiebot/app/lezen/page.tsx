@@ -12,6 +12,14 @@ import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+type SessionPhase = 'topic-selection' | 'reading-questions' | 'results';
+
+export default function LezenPage() {
+  const router = useRouter();
+  const [phase, setPhase] = useState<SessionPhase>('topic-selection');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<LezenGenerateResponse | null>(null);
+  const [answers, setAnswers] = useState<LezenAnswerState>({});
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [error, setError] = useState<string>('');
 
@@ -58,7 +66,6 @@ import Link from 'next/link';
   };
 
   const handleAllAnswered = () => {
-    // Small delay to let the last answer animation complete
     setTimeout(() => {
       setPhase('results');
     }, 1000);
@@ -82,7 +89,6 @@ import Link from 'next/link';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-600">
-      {/* Header */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -111,7 +117,6 @@ import Link from 'next/link';
           )}
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800" data-testid="error-message">
             <p className="font-medium">Er ging iets mis:</p>
@@ -127,7 +132,6 @@ import Link from 'next/link';
           </div>
         )}
 
-        {/* Main Content */}
         <div className="max-w-4xl mx-auto">
           {phase === 'topic-selection' && (
             <TopicPicker
@@ -138,16 +142,13 @@ import Link from 'next/link';
 
           {phase === 'reading-questions' && generatedContent && (
             <div className="space-y-8" data-testid="reading-questions-section">
-              {/* Topic Header */}
               <div className="text-center text-white mb-6">
                 <h2 className="text-xl font-semibold mb-2">Onderwerp: {selectedTopic}</h2>
                 <p className="text-white/90">Lees eerst de tekst, beantwoord daarna de vragen</p>
               </div>
 
-              {/* Article */}
               <ArticleCard article={generatedContent.article} />
 
-              {/* Questions */}
               <div>
                 <h3 className="text-xl font-bold text-white mb-4 text-center">
                   Vragen bij de tekst
@@ -164,7 +165,6 @@ import Link from 'next/link';
 
           {phase === 'results' && generatedContent && (
             <div className="space-y-6" data-testid="results-section">
-              {/* Topic Header */}
               <div className="text-center text-white mb-6">
                 <h2 className="text-xl font-semibold mb-2">Resultaten voor: {selectedTopic}</h2>
                 <p className="text-white/90">Bekijk hoe je het hebt gedaan</p>
