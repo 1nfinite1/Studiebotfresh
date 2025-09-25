@@ -28,7 +28,7 @@ export default function LezenPage() {
     setSelectedTopic(topic);
 
     try {
-      const response = await fetch('/api/lezen/generate', {
+      const response = await fetch('/api/llm/lezen', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
