@@ -36,7 +36,7 @@ async function generateLezenContent(request: LezenGenerateRequest): Promise<Leze
 
   const openai = new OpenAI({
     apiKey: apiKey,
-    baseURL: 'https://api.emergentmind.com/v1', // Use emergent endpoint
+    // Use standard OpenAI endpoint - the key should route correctly
   });
 
   // Format the user message with the topic
