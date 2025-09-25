@@ -1,10 +1,6 @@
 export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { LezenGenerateRequest, LezenGenerateResponse } from '../../../../lib/types/lezen';
-import { validateLezenResponse } from '../../../../backend/lezen/validate';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
 import OpenAI from 'openai';
 
 function jsonOk(data: any, headers?: Record<string, string>, status = 200) {
