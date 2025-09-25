@@ -57,7 +57,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
             </span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </TypedCardContent>
+    </TypedCard>
   );
 }
