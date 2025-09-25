@@ -64,8 +64,8 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-white transform -translate-x-0.5 z-10 shadow-2xl opacity-80"></div>
         
         {/* Left side - Topics */}
-        <div className="w-1/2 pr-16 flex flex-col justify-center">
-          <div className="space-y-6">
+        <div className="w-1/2 flex flex-col justify-center items-center">
+          <div className="space-y-6 max-w-lg">
             {/* Header for left side */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -74,10 +74,10 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
               </div>
             </div>
 
-            {/* Playful topic rows */}
-            <div className="space-y-4 max-w-lg mx-auto">
+            {/* Playful topic rows - centered in left half */}
+            <div className="space-y-4">
               {topicRows.map((row, rowIndex) => (
-                <div key={rowIndex} className={`flex gap-3 justify-start ${row.offset}`}>
+                <div key={rowIndex} className={`flex gap-3 justify-center ${row.offset}`}>
                   {row.topics.map((topic) => (
                     <Button
                       key={topic}
@@ -102,9 +102,9 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
 
         {/* Right side - Custom input */}
-        <div className="w-1/2 pl-16 flex items-center justify-center">
-          <div className="flex flex-col items-center justify-center h-full space-y-8">
-            {/* Custom topic section */}
+        <div className="w-1/2 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center space-y-8">
+            {/* Custom topic section - centered in right half */}
             <div className="text-center space-y-6">
               <div className="space-y-6">
                 <div className="flex items-center gap-6 justify-center">
