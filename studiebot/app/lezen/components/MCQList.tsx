@@ -107,7 +107,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
             }`}
             data-testid={`question-card-${question.id}`}
           >
-            <CardContent className="p-0">
+            <TypedCardContent className="p-0">
               {/* Question Header - Always Visible */}
               <div 
                 className={`p-4 cursor-pointer transition-colors ${
