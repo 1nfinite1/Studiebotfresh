@@ -56,15 +56,15 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    <div className="h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Main container with 70% height */}
-      <div className="w-full h-[70vh] flex relative">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Main container with better centering and fixed height */}
+      <div className="w-full max-w-7xl h-[70vh] flex relative mx-auto">
         
-        {/* Vertical white line in the middle */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/80 transform -translate-x-0.5 z-10 shadow-lg"></div>
+        {/* Vertical white line in the middle - more visible */}
+        <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-white transform -translate-x-0.5 z-10 shadow-2xl opacity-80"></div>
         
         {/* Left side - Topics */}
-        <div className="w-1/2 pr-12 flex flex-col justify-center">
+        <div className="w-1/2 pr-16 flex flex-col justify-center">
           <div className="space-y-6">
             {/* Header for left side */}
             <div className="text-center mb-8">
@@ -75,7 +75,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
             </div>
 
             {/* Playful topic rows */}
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-lg mx-auto">
               {topicRows.map((row, rowIndex) => (
                 <div key={rowIndex} className={`flex gap-3 justify-start ${row.offset}`}>
                   {row.topics.map((topic) => (
@@ -102,27 +102,27 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
 
         {/* Right side - Custom input */}
-        <div className="w-1/2 pl-12 flex items-center justify-center">
+        <div className="w-1/2 pl-16 flex items-center justify-center">
           <div className="flex flex-col items-center justify-center h-full space-y-8">
             {/* Custom topic section */}
             <div className="text-center space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 justify-center">
+              <div className="space-y-6">
+                <div className="flex items-center gap-6 justify-center">
                   <label className="text-white font-semibold text-lg whitespace-nowrap">
                     Kies je eigen onderwerp
                   </label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
                     <Input
                       type="text"
                       value={customTopic}
                       onChange={(e) => setCustomTopic(e.target.value)}
-                      placeholder="Bijv. Ruimtevaart"
+                      placeholder="bijv. Ruimtevaart"
                       disabled={isGenerating}
                       className="
-                        pl-10 pr-4 py-3 w-64 rounded-full
+                        pl-12 pr-4 py-3 w-72 rounded-full
                         bg-white/15 backdrop-blur-md border border-white/40
-                        text-white placeholder:text-white/70
+                        text-white placeholder:text-white/60
                         focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
                         transition-all duration-300 shadow-md
                       "
