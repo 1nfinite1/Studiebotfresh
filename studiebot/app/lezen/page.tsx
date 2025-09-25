@@ -6,7 +6,7 @@ import { TopicPicker } from './components/TopicPicker';
 import { ArticleCard } from './components/ArticleCard';
 import { MCQList } from './components/MCQList';
 import { ResultSummary } from './components/ResultSummary';
-import { Button } from '../../components/ui/button.jsx';
+import { Button } from '../../components/ui/button';
 import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
