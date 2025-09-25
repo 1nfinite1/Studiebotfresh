@@ -21,8 +21,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const readingTime = Math.ceil(totalWords / 200);
 
   return (
-    <Card className="bg-white shadow-lg border-0 overflow-hidden" data-testid="article-card">
-      <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white pb-4">
+    <TypedCard className="bg-white shadow-lg border-0 overflow-hidden" data-testid="article-card">
+      <TypedCardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-purple-200" />
