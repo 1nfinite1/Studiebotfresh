@@ -5,17 +5,6 @@ import React from 'react';
 import { LezenArticle } from '../../../lib/types/lezen';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 
-// Type assertion for JSX components
-const Card = Card as any;
-const CardHeader = CardHeader as any;
-const CardContent = CardContent as any;
-const CardTitle = CardTitle as any;
-import { FileText, Clock } from 'lucide-react';
-
-interface ArticleCardProps {
-  article: LezenArticle;
-}
-
 export function ArticleCard({ article }: ArticleCardProps) {
   // Calculate estimated reading time (Dutch average: ~200 words per minute)
   const totalWords = article.paragraphs.join(' ').split(/\s+/).filter(word => word.length > 0).length;

@@ -6,17 +6,6 @@ import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 
-// Type assertion for JSX components
-const Card = Card as any;
-const CardContent = CardContent as any;
-const Button = Button as any;
-import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
-
-interface MCQListProps {
-  questions: LezenQuestion[];
-  answers: LezenAnswerState;
-  onAnswerChange: (questionId: string, choiceIndex: number) => void;
-  onAllAnswered?: () => void;
 }
 
 export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: MCQListProps) {

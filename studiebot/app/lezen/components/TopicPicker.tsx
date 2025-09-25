@@ -6,17 +6,6 @@ import { LEZEN_ALL_TOPICS } from '../../../lib/types/lezen';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 
-// Type assertion for JSX components
-const Button = Button as any;
-const Input = Input as any;
-import { Search, BookOpen } from 'lucide-react';
-
-interface TopicPickerProps {
-  onTopicSelect: (topic: string) => void;
-  isGenerating: boolean;
-}
-
-export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const [customTopic, setCustomTopic] = useState('');
 
   const handleCustomSubmit = (e: React.FormEvent) => {

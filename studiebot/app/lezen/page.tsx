@@ -12,17 +12,6 @@ import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// Type assertion for JSX components  
-const Button = Button as any;
-
-type SessionPhase = 'topic-selection' | 'reading-questions' | 'results';
-
-export default function LezenPage() {
-  const router = useRouter();
-  const [phase, setPhase] = useState<SessionPhase>('topic-selection');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<LezenGenerateResponse | null>(null);
-  const [answers, setAnswers] = useState<LezenAnswerState>({});
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [error, setError] = useState<string>('');
 
