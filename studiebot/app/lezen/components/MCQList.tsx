@@ -97,7 +97,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
         const selectedChoice = answers[question.id];
 
         return (
-          <Card 
+          <TypedCard 
             key={question.id}
             ref={el => questionRefs.current[question.id] = el}
             className={`transition-all duration-300 ${
