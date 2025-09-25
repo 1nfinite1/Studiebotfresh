@@ -196,7 +196,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                 </div>
               )}
             </CardContent>
-          </Card>
+          </TypedCard>
         );
       })}
 
