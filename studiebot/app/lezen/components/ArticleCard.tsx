@@ -3,6 +3,12 @@
 import React from 'react';
 import { LezenArticle } from '../../../lib/types/lezen';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+
+// Type assertion for JSX components
+const TypedCard = Card as any;
+const TypedCardHeader = CardHeader as any;
+const TypedCardContent = CardContent as any;
+const TypedCardTitle = CardTitle as any;
 import { FileText, Clock } from 'lucide-react';
 
 interface ArticleCardProps {
