@@ -4,6 +4,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
+
+// Type assertion for JSX components
+const TypedCard = Card as any;
+const TypedCardContent = CardContent as any;
+const TypedButton = Button as any;
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 interface MCQListProps {
