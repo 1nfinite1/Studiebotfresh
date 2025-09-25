@@ -151,7 +151,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                       data-testid={`toggle-question-${question.id}`}
                     >
                       {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                    </Button>
+                    </TypedButton>
                   )}
                 </div>
               </div>
@@ -190,7 +190,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                             {choice.replace(/^[A-D]\s*/, '')}
                           </span>
                         </div>
-                      </Button>
+                      </TypedButton>
                     );
                   })}
                 </div>
