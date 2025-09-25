@@ -26,9 +26,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-purple-200" />
-            <CardTitle className="text-xl font-bold leading-tight" data-testid="article-title">
+            <TypedCardTitle className="text-xl font-bold leading-tight" data-testid="article-title">
               {article.title}
-            </CardTitle>
+            </TypedCardTitle>
           </div>
           <div className="flex items-center gap-1 bg-white/20 rounded-full px-3 py-1 text-sm font-medium shrink-0">
             <Clock className="h-4 w-4" />
