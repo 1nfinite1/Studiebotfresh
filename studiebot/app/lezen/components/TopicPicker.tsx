@@ -29,17 +29,25 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
     const rows = [];
     let currentIndex = 0;
 
-    // Define row sizes to create variety
-    const rowSizes = [4, 3, 5, 4, 4]; // This gives us 20 topics total
+    // Define row sizes and offsets to create variety
+    const rowConfigs = [
+      { size: 4, offset: 'ml-0' },
+      { size: 3, offset: 'ml-12' },
+      { size: 5, offset: 'ml-4' },
+      { size: 4, offset: 'ml-8' },
+      { size: 4, offset: 'ml-2' }
+    ];
 
-    rowSizes.forEach((size, rowIndex) => {
-      const rowTopics = topics.slice(currentIndex, currentIndex + size);
-      rows.push({
-        topics: rowTopics,
-        size,
-        offset: rowIndex % 2 === 0 ? 'ml-0' : 'ml-8' // Alternate offset for playful look
-      });
-      currentIndex += size;
+    rowConfigs.forEach((config, rowIndex) => {
+      const rowTopics = topics.slice(currentIndex, currentIndex + config.size);
+      if (rowTopics.length > 0) {
+        rows.push({
+          topics: rowTopics,
+          size: config.size,
+          offset: config.offset
+        });
+        currentIndex += config.size;
+      }
     });
 
     return rows;
