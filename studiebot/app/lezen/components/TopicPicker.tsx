@@ -56,9 +56,9 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    <div className="grid min-h-[100dvh] grid-cols-1 md:grid-cols-2 relative">
-      {/* Vertical divider - absolute positioned, no layout interference */}
-      <span className="hidden md:block pointer-events-none absolute left-1/2 top-0 h-full w-px bg-white/80 z-0"></span>
+    <div className="grid min-h-[100dvh] grid-cols-2 relative">
+      {/* Vertical divider - horizontal white line in the middle */}
+      <div className="absolute left-1/2 top-0 h-full w-px bg-white/80 transform -translate-x-0.5 z-10 shadow-lg"></div>
       
       {/* Left column - Topics */}
       <div className="flex flex-col justify-center items-center p-6">
@@ -98,61 +98,57 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
       </div>
 
-      {/* Right column - Custom input (properly centered with grid) */}
-      <div className="grid place-items-center p-6">
-        <div className="w-full max-w-[560px]">
-          <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <div className="space-y-6 text-center">
-              {/* Header and input on one line */}
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <label className="text-white font-semibold text-lg whitespace-nowrap">
-                  Kies je eigen onderwerp
-                </label>
-                <div className="relative flex-1 min-w-64">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
-                  <Input
-                    type="text"
-                    value={customTopic}
-                    onChange={(e) => setCustomTopic(e.target.value)}
-                    placeholder="bijv. Ruimtevaart"
-                    disabled={isGenerating}
-                    className="
-                      pl-12 pr-4 py-3 w-full rounded-full
-                      bg-white/15 backdrop-blur-md border border-white/40
-                      text-white placeholder:text-white/60
-                      focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
-                      transition-all duration-300 shadow-md
-                    "
-                    data-testid="custom-topic-input"
-                    onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
-                  />
-                </div>
-              </div>
-
-              {/* Button centered below */}
-              <div className="flex justify-center">
-                <Button
-                  onClick={handleCustomSubmit}
-                  disabled={isGenerating || !customTopic.trim()}
-                  className="
-                    px-8 py-3.5 rounded-full font-semibold text-lg
-                    bg-white text-purple-700 hover:bg-white/95 hover:scale-105
-                    transition-all duration-300 shadow-lg
-                    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                  "
-                  data-testid="generate-custom-topic-btn"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Tekst genereren...</span>
-                    </div>
-                  ) : (
-                    'Tekst genereren'
-                  )}
-                </Button>
-              </div>
+      {/* Right column - Custom input (no background panel) */}
+      <div className="flex flex-col justify-center items-center p-6">
+        <div className="w-full max-w-[520px] space-y-6 text-center">
+          {/* Header and input */}
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <label className="text-white font-semibold text-lg whitespace-nowrap">
+              Kies je eigen onderwerp
+            </label>
+            <div className="relative flex-1 min-w-64">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
+              <Input
+                type="text"
+                value={customTopic}
+                onChange={(e) => setCustomTopic(e.target.value)}
+                placeholder="bijv. Ruimtevaart"
+                disabled={isGenerating}
+                className="
+                  pl-12 pr-4 py-3 w-full rounded-full
+                  bg-white/15 backdrop-blur-md border border-white/40
+                  text-white placeholder:text-white/60
+                  focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
+                  transition-all duration-300 shadow-md
+                "
+                data-testid="custom-topic-input"
+                onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
+              />
             </div>
+          </div>
+
+          {/* Button centered below */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleCustomSubmit}
+              disabled={isGenerating || !customTopic.trim()}
+              className="
+                px-8 py-3.5 rounded-full font-semibold text-lg
+                bg-white text-purple-700 hover:bg-white/95 hover:scale-105
+                transition-all duration-300 shadow-lg
+                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+              "
+              data-testid="generate-custom-topic-btn"
+            >
+              {isGenerating ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Tekst genereren...</span>
+                </div>
+              ) : (
+                'Tekst genereren'
+              )}
+            </Button>
           </div>
         </div>
       </div>
