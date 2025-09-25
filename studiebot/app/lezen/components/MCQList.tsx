@@ -144,7 +144,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                   </div>
                   
                   {isAnswered && (
-                    <Button 
+                    <TypedButton 
                       variant="ghost" 
                       size="sm"
                       className="shrink-0 text-gray-500 hover:text-gray-700"
