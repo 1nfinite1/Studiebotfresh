@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { LezenArticle } from '../../../lib/types/lezen';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card.jsx';
 import { FileText, Clock } from 'lucide-react';
 
 interface ArticleCardProps {
