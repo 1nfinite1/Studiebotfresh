@@ -7,6 +7,9 @@ import { ArticleCard } from './components/ArticleCard';
 import { MCQList } from './components/MCQList';
 import { ResultSummary } from './components/ResultSummary';
 import { Button } from '../../components/ui/button';
+
+// Type assertion for JSX components  
+const TypedButton = Button as any;
 import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
