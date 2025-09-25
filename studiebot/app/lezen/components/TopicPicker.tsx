@@ -64,8 +64,8 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-white transform -translate-x-0.5 z-10 shadow-2xl opacity-80"></div>
         
         {/* Left side - Topics */}
-        <div className="w-1/2 flex flex-col justify-center items-center">
-          <div className="space-y-6 max-w-lg">
+        <div className="w-1/2 flex flex-col justify-center items-center px-8">
+          <div className="space-y-6 w-full max-w-md">
             {/* Header for left side */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -74,10 +74,10 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
               </div>
             </div>
 
-            {/* Playful topic rows - centered in left half */}
+            {/* Playful topic rows - safely contained within left half */}
             <div className="space-y-4">
               {topicRows.map((row, rowIndex) => (
-                <div key={rowIndex} className={`flex gap-3 justify-center ${row.offset}`}>
+                <div key={rowIndex} className={`flex gap-3 flex-wrap justify-center ${row.offset}`}>
                   {row.topics.map((topic) => (
                     <Button
                       key={topic}
@@ -102,57 +102,55 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
 
         {/* Right side - Custom input */}
-        <div className="w-1/2 flex items-center justify-center">
-          <div className="flex flex-col items-center justify-center space-y-8">
-            {/* Custom topic section - centered in right half */}
-            <div className="text-center space-y-6">
-              <div className="space-y-6">
-                <div className="flex items-center gap-6 justify-center">
-                  <label className="text-white font-semibold text-lg whitespace-nowrap">
-                    Kies je eigen onderwerp
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
-                    <Input
-                      type="text"
-                      value={customTopic}
-                      onChange={(e) => setCustomTopic(e.target.value)}
-                      placeholder="bijv. Ruimtevaart"
-                      disabled={isGenerating}
-                      className="
-                        pl-12 pr-4 py-3 w-72 rounded-full
-                        bg-white/15 backdrop-blur-md border border-white/40
-                        text-white placeholder:text-white/60
-                        focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
-                        transition-all duration-300 shadow-md
-                      "
-                      data-testid="custom-topic-input"
-                      onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
-                    />
-                  </div>
+        <div className="w-1/2 flex flex-col justify-center items-center px-8">
+          <div className="space-y-8 text-center">
+            {/* Custom topic section - properly centered */}
+            <div className="space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <label className="text-white font-semibold text-lg">
+                  Kies je eigen onderwerp
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
+                  <Input
+                    type="text"
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    placeholder="bijv. Ruimtevaart"
+                    disabled={isGenerating}
+                    className="
+                      pl-12 pr-4 py-3 w-80 rounded-full
+                      bg-white/15 backdrop-blur-md border border-white/40
+                      text-white placeholder:text-white/60
+                      focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
+                      transition-all duration-300 shadow-md
+                    "
+                    data-testid="custom-topic-input"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
+                  />
                 </div>
-
-                <Button
-                  onClick={handleCustomSubmit}
-                  disabled={isGenerating || !customTopic.trim()}
-                  className="
-                    px-8 py-3.5 rounded-full font-semibold text-lg
-                    bg-white text-purple-700 hover:bg-white/95 hover:scale-105
-                    transition-all duration-300 shadow-lg
-                    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                  "
-                  data-testid="generate-custom-topic-btn"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Tekst genereren...</span>
-                    </div>
-                  ) : (
-                    'Tekst genereren'
-                  )}
-                </Button>
               </div>
+
+              <Button
+                onClick={handleCustomSubmit}
+                disabled={isGenerating || !customTopic.trim()}
+                className="
+                  px-8 py-3.5 rounded-full font-semibold text-lg
+                  bg-white text-purple-700 hover:bg-white/95 hover:scale-105
+                  transition-all duration-300 shadow-lg
+                  disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+                "
+                data-testid="generate-custom-topic-btn"
+              >
+                {isGenerating ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Tekst genereren...</span>
+                  </div>
+                ) : (
+                  'Tekst genereren'
+                )}
+              </Button>
             </div>
           </div>
         </div>
