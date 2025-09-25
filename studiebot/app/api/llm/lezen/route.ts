@@ -4,7 +4,24 @@ import { LezenGenerateRequest, LezenGenerateResponse } from '../../../../lib/typ
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import OpenAI from 'openai';
+
+// Import the project's LLM infrastructure
+const getClient = () => {
+  const ENABLED = process.env.LLM_ENABLED === 'true';
+  const PROVIDER = process.env.LLM_PROVIDER || 'openai';
+  
+  if (!ENABLED || PROVIDER !== 'openai') return null;
+  
+  // Try multiple API key sources
+  const apiKey = process.env.OPENAI_API_KEY || process.env.EMERGENT_LLM_KEY;
+  if (!apiKey) return null;
+  
+  // Dynamic import to avoid the linting issue
+  const OpenAI = require('openai');
+  return new OpenAI.default({ apiKey });
+};
+
+const MODEL_LEZEN = process.env.OPENAI_MODEL_LEZEN || 'gpt-4o-mini';
 
 function jsonOk(data: any, headers?: Record<string, string>, status = 200) {
   return NextResponse.json({ ok: true, ...data }, { status, headers });
@@ -80,15 +97,11 @@ Onderwerp: {topic}`
     };
   }
 
-  // Initialize OpenAI client
-  const apiKey = process.env.OPENAI_API_KEY || process.env.EMERGENT_LLM_KEY;
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured');
+  // Initialize OpenAI client using project pattern
+  const client = getClient();
+  if (!client) {
+    throw new Error('OpenAI client not available - LLM disabled or API key not configured');
   }
-
-  const openai = new OpenAI({
-    apiKey: apiKey,
-  });
 
   // Format the user message with the topic
   const userMessage = promptTemplate.user_message.replace(/\{topic\}/g, request.topic);
@@ -96,8 +109,8 @@ Onderwerp: {topic}`
   try {
     console.log(`Generating OpenAI content for topic: ${request.topic}`);
     
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const completion = await client.chat.completions.create({
+      model: MODEL_LEZEN, // Use environment variable pattern
       messages: [
         {
           role: 'system',
@@ -164,8 +177,8 @@ Onderwerp: {topic}`
       // Try regeneration once if parsing fails
       console.log('Attempting regeneration due to parsing error...');
       
-      const retryCompletion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const retryCompletion = await client.chat.completions.create({
+        model: MODEL_LEZEN,
         messages: [
           {
             role: 'system',
@@ -251,6 +264,7 @@ export async function POST(req: NextRequest) {
       'X-Debug': 'lezen:generate|success',
       'X-Topic': body.topic,
       'X-Level': level,
+      'X-Model': MODEL_LEZEN,
       'X-Generated-At': new Date().toISOString()
     };
 
