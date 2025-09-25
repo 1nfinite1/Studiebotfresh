@@ -53,7 +53,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
               data-testid={`topic-button-${topic.toLowerCase().replace(/\s+/g, '-')}`}
             >
               {topic}
-            </Button>
+            </TypedButton>
           ))}
         </div>
       </div>
@@ -88,7 +88,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
             ) : (
               'Genereer tekst'
             )}
-          </Button>
+          </TypedButton>
         </form>
       </div>
 
