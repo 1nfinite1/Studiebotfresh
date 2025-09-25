@@ -66,13 +66,34 @@ function LLMNotice() {
 
 function HeaderBar({ step, setStep }) {
   return (
-    <div className="container mx-auto flex items-center gap-3 py-4">
-      {step > 0 && (
-        <button onClick={() => setStep((s) => Math.max(0, s - 1))} className="rounded-full bg-white/20 p-2 ring-1 ring-white/30 hover:bg-white/30" aria-label="Ga terug">
-          <IconBack />
+    <div className="container mx-auto py-4">
+      {/* Main Header */}
+      <div className="flex items-center gap-3 mb-4">
+        {step > 0 && (
+          <button onClick={() => setStep((s) => Math.max(0, s - 1))} className="rounded-full bg-white/20 p-2 ring-1 ring-white/30 hover:bg-white/30" aria-label="Ga terug">
+            <IconBack />
+          </button>
+        )}
+        <h1 className="text-xl font-bold">Studiebot</h1>
+      </div>
+      
+      {/* Navigation Toggle */}
+      <div className="flex items-center justify-center gap-2">
+        <button 
+          className="px-6 py-2 bg-white text-purple-700 font-semibold rounded-full hover:bg-purple-100 transition-colors"
+          data-testid="leren-nav-btn"
+        >
+          Leren
         </button>
-      )}
-      <h1 className="text-xl font-bold">Studiebot</h1>
+        <span className="text-white/60">|</span>
+        <button 
+          onClick={() => window.location.href = '/lezen'}
+          className="px-6 py-2 bg-white/10 text-white font-semibold rounded-full border border-white/30 hover:bg-white/20 transition-colors"
+          data-testid="lezen-nav-btn"
+        >
+          Lezen
+        </button>
+      </div>
     </div>
   )
 }
