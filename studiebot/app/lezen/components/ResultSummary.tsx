@@ -7,6 +7,16 @@ import { Button } from '../../../components/ui/button';
 import { CheckCircle, XCircle, ChevronDown, ChevronUp, Trophy, Target, BookOpen } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../components/ui/collapsible';
 
+// Type assertion for JSX components
+const TypedCard = Card as any;
+const TypedCardContent = CardContent as any;
+const TypedCardHeader = CardHeader as any;
+const TypedCardTitle = CardTitle as any;
+const TypedButton = Button as any;
+const TypedCollapsible = Collapsible as any;
+const TypedCollapsibleContent = CollapsibleContent as any;
+const TypedCollapsibleTrigger = CollapsibleTrigger as any;
+
 interface ResultSummaryProps {
   questions: LezenQuestion[];
   answers: LezenAnswerState;
