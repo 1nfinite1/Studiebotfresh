@@ -29,13 +29,12 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
     const rows = [] as { topics: string[]; size: number; offset: string }[];
     let currentIndex = 0;
 
-    // Define row sizes and smaller, safer offsets to prevent overflow
     const rowConfigs = [
       { size: 4, offset: '' },
-      { size: 3, offset: 'ml-6' },
-      { size: 5, offset: 'ml-2' },
-      { size: 4, offset: 'ml-4' },
-      { size: 4, offset: 'ml-1' }
+      { size: 3, offset: '' },
+      { size: 5, offset: '' },
+      { size: 4, offset: '' },
+      { size: 4, offset: '' }
     ];
 
     rowConfigs.forEach((config) => {
@@ -52,10 +51,10 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    // Keep wrapper height at ~70% viewport for the landing layout and center contents
-    <div className="w-full min-h-[70vh] flex relative">
+    // Full-bleed, precise grid: left | 2px divider | right
+    <section className="w-full grid grid-cols-[1fr_2px_1fr] items-center min-h-[70vh]">
       {/* Left half - Topics */}
-      <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
+      <div className="flex flex-col justify-center items-center p-8">
         <div className="space-y-6 w-full max-w-xl">
           {/* Header for left side */}
           <div className="text-center mb-6">
@@ -68,19 +67,22 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
           {/* Playful topic rows */}
           <div className="space-y-4">
             {topicRows.map((row, rowIndex) => (
-              <div key={rowIndex} className={`flex gap-3 flex-wrap justify-center ${row.offset}`}>
-                {row.topics.map((topic) => (
+              <div
+                key={rowIndex}
+                className={`flex gap-3 flex-wrap justify-center ${row.offset}`}
+              >
+                {row.topics.map((topic, idx) => (
                   <Button
                     key={topic}
                     onClick={() => onTopicSelect(topic)}
                     disabled={isGenerating}
-                    className="
+                    className={`
                       px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap
                       bg-white/15 backdrop-blur-md border border-white/40
                       text-white hover:bg-white/25 hover:scale-105 hover:shadow-lg
                       transition-all duration-300 shadow-md
                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                    "
+                    `}
                     data-testid={`topic-button-${topic.toLowerCase().replace(/\s+/g, '-')}`}
                   >
                     {topic}
@@ -92,11 +94,11 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
       </div>
 
-      {/* Vertical white line in the middle (70% viewport height) */}
-      <div className="self-center h-[70vh] w-px md:w-[2px] bg-white/90 rounded-full shadow-2xl" />
+      {/* Center divider - exactly 2px wide, 70vh tall, centered */}
+      <div className="h-[70vh] w-[2px] bg-white/90 rounded-full justify-self-center" />
       
       {/* Right half - Custom input */}
-      <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
+      <div className="flex flex-col justify-center items-center p-8">
         <div className="space-y-8 w-full max-w-md text-center mx-auto">
           {/* Custom topic section */}
           <div className="space-y-6">
@@ -160,6 +162,6 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
