@@ -56,12 +56,9 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    <div className="min-h-screen flex relative">
-      {/* Vertical white line in the middle */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white transform -translate-x-0.5 z-10 shadow-lg"></div>
-      
+    <div className="min-h-screen w-full flex relative bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-600">
       {/* Left half - Topics */}
-      <div className="w-1/2 flex flex-col justify-center items-center p-8">
+      <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
         <div className="space-y-6 w-full max-w-lg">
           {/* Header for left side */}
           <div className="text-center mb-8">
@@ -98,8 +95,11 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
       </div>
 
+      {/* Vertical white line in the middle */}
+      <div className="w-1 bg-white opacity-80 shadow-2xl"></div>
+      
       {/* Right half - Custom input */}
-      <div className="w-1/2 flex flex-col justify-center items-center p-8">
+      <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
         <div className="space-y-8 w-full max-w-md text-center">
           {/* Custom topic section */}
           <div className="space-y-6">
