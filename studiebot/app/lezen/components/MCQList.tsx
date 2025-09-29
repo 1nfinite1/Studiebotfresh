@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LezenQuestion, LezenAnswerState } from '../../../lib/types/lezen';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -16,44 +16,28 @@ interface MCQListProps {
 
 export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: MCQListProps) {
   const [collapsedQuestions, setCollapsedQuestions] = useState<Set<string>>(new Set());
-  const questionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const allAnswered = questions.every(q => answers[q.id] !== undefined);
   const answeredCount = Object.keys(answers).length;
 
-  useEffect(() => {
-    if (answeredCount > 0 && answeredCount < questions.length) {
-      const nextUnanswered = questions.find(q => answers[q.id] === undefined);
-      if (nextUnanswered && questionRefs.current[nextUnanswered.id]) {
-        setTimeout(() => {
-          questionRefs.current[nextUnanswered.id]?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }, 300);
-      }
-    } else if (allAnswered && onAllAnswered) {
-      onAllAnswered();
-    }
-  }, [answeredCount, allAnswered, questions, answers, onAllAnswered]);
+  // When all questions are answered, allow parent to proceed (no auto-scroll to next question)
+  React.useEffect(() => {
+    if (allAnswered && onAllAnswered) onAllAnswered();
+  }, [allAnswered, onAllAnswered]);
 
   const handleAnswerSelect = (questionId: string, choiceIndex: number) => {
     onAnswerChange(questionId, choiceIndex);
-    
+    // Auto-collapse after answering to free up space for next question
     setTimeout(() => {
       setCollapsedQuestions(prev => new Set(prev).add(questionId));
-    }, 500);
+    }, 250);
   };
 
   const toggleCollapse = (questionId: string) => {
     setCollapsedQuestions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(questionId)) {
-        newSet.delete(questionId);
-      } else {
-        newSet.add(questionId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      if (next.has(questionId)) next.delete(questionId); else next.add(questionId);
+      return next;
     });
   };
 
@@ -64,6 +48,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
 
   return (
     <div className="space-y-4" data-testid="mcq-list">
+      {/* Progress header */}
       <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm ring-1 ring-white/20">
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
@@ -90,80 +75,86 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
         return (
           <Card 
             key={question.id}
-            ref={el => questionRefs.current[question.id] = el}
-            className={`transition-all duration-300 ${
+            className={`transition-all duration-300 backdrop-blur-sm ${
               isAnswered 
-                ? 'bg-green-50 border-green-200 shadow-md' 
-                : 'bg-white border-purple-200 shadow-sm hover:shadow-md'
+                ? 'bg-white/5 border-white/20 text-white shadow-sm' 
+                : 'bg-white/10 border-white/20 text-white shadow-sm hover:bg-white/15'
             }`}
             data-testid={`question-card-${question.id}`}
           >
             <CardContent className="p-0">
-              <div 
-                className={`p-4 cursor-pointer transition-colors ${
-                  isAnswered ? 'bg-green-100/50' : 'hover:bg-purple-50'
-                }`}
-                onClick={() => isAnswered ? toggleCollapse(question.id) : undefined}
-                data-testid={`question-header-${question.id}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                        isAnswered 
-                          ? 'bg-green-200 text-green-800' 
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        {getQuestionTypeIndicator(index)}
-                      </span>
-                      <span className="text-sm font-medium text-gray-600">
-                        Vraag {index + 1}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-purple-900 leading-snug">
-                      {question.question}
-                    </h3>
-                    {isAnswered && isCollapsed && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-sm text-gray-600">Antwoord:</span>
-                        <span className="font-medium text-green-700">
-                          {String.fromCharCode(65 + selectedChoice)}
+              {/* Collapsed header (single-line) */}
+              {isAnswered && isCollapsed ? (
+                <div 
+                  className="h-12 px-4 flex items-center justify-between cursor-pointer hover:bg-white/10"
+                  onClick={() => toggleCollapse(question.id)}
+                  data-testid={`question-header-${question.id}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-200/90 text-green-900">{getQuestionTypeIndicator(index)}</span>
+                    <span className="text-sm text-white/90 font-medium shrink-0">Vraag {index + 1}</span>
+                    <span className="text-sm text-white/70 truncate">
+                      • Antwoord: <span className="font-semibold text-white">{String.fromCharCode(65 + selectedChoice)}</span>
+                    </span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-white/80" />
+                </div>
+              ) : (
+                // Expanded header with question text
+                <div 
+                  className={`p-4 cursor-pointer transition-colors ${isAnswered ? 'bg-white/5' : 'hover:bg-white/10'}`}
+                  onClick={() => isAnswered ? toggleCollapse(question.id) : undefined}
+                  data-testid={`question-header-${question.id}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          isAnswered ? 'bg-green-200 text-green-800' : 'bg-white/30 text-white'
+                        }`}>
+                          {getQuestionTypeIndicator(index)}
+                        </span>
+                        <span className="text-sm font-medium text-white/80">
+                          Vraag {index + 1}
                         </span>
                       </div>
+                      <h3 className="text-base font-semibold text-white leading-snug">
+                        {question.question}
+                      </h3>
+                    </div>
+                    {isAnswered && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="shrink-0 text-white/80 hover:text-white"
+                        data-testid={`toggle-question-${question.id}`}
+                        onClick={() => toggleCollapse(question.id)}
+                      >
+                        {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      </Button>
                     )}
                   </div>
-                  
-                  {isAnswered && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="shrink-0 text-gray-500 hover:text-gray-700"
-                      data-testid={`toggle-question-${question.id}`}
-                    >
-                      {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                    </Button>
-                  )}
                 </div>
-              </div>
+              )}
 
+              {/* Choices (only visible when not collapsed) */}
               {(!isAnswered || !isCollapsed) && (
                 <div className="px-4 pb-4 space-y-3" data-testid={`question-choices-${question.id}`}>
                   {question.choices.map((choice, choiceIndex) => {
                     const isSelected = selectedChoice === choiceIndex;
                     const choiceLetter = String.fromCharCode(65 + choiceIndex);
-                    
                     return (
                       <Button
                         key={choiceIndex}
                         onClick={() => handleAnswerSelect(question.id, choiceIndex)}
                         disabled={isAnswered}
                         variant="outline"
-                        className={`w-full text-left justify-start p-4 h-auto transition-all duration-200 ${
+                        className={`w-full text-left justify-start p-4 h-auto transition-all duration-200 border ${
                           isSelected
-                            ? 'bg-green-100 border-green-300 text-green-800 shadow-sm'
+                            ? 'bg-green-400/20 border-green-300/60 text-white ring-1 ring-green-300/60'
                             : isAnswered
-                            ? 'opacity-60 cursor-not-allowed'
-                            : 'hover:bg-purple-50 hover:border-purple-300 border-gray-200'
+                            ? 'opacity-60 cursor-not-allowed border-white/20 text-white/70'
+                            : 'hover:bg-white/15 hover:border-white/30 border-white/20 text-white'
                         }`}
                         data-testid={`choice-${question.id}-${choiceIndex}`}
                       >
@@ -171,7 +162,7 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
                           <span className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
                             isSelected
                               ? 'bg-green-500 border-green-500 text-white'
-                              : 'border-gray-300 text-gray-600'
+                              : 'border-white/40 text-white/90'
                           }`}>
                             {choiceLetter}
                           </span>
@@ -190,11 +181,11 @@ export function MCQList({ questions, answers, onAnswerChange, onAllAnswered }: M
       })}
 
       {allAnswered && (
-        <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-          <div className="text-green-700 text-lg font-semibold mb-2">
+        <div className="text-center p-6 bg-white/10 rounded-xl border border-white/20 text-white">
+          <div className="text-white text-lg font-semibold mb-2">
             🎉 Alle vragen beantwoord!
           </div>
-          <p className="text-green-600">
+          <p className="text-white/90">
             Je hebt alle {questions.length} vragen beantwoord. Bekijk je resultaten hieronder.
           </p>
         </div>

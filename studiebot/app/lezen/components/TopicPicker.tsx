@@ -26,7 +26,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   // Create playful rows with 3-5 topics each
   const createPlayfulRows = () => {
     const topics = [...LEZEN_ALL_TOPICS];
-    const rows = [];
+    const rows = [] as { topics: string[]; size: number; offset: string }[];
     let currentIndex = 0;
 
     // Define row sizes and smaller, safer offsets to prevent overflow
@@ -38,14 +38,10 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
       { size: 4, offset: 'ml-1' }
     ];
 
-    rowConfigs.forEach((config, rowIndex) => {
+    rowConfigs.forEach((config) => {
       const rowTopics = topics.slice(currentIndex, currentIndex + config.size);
       if (rowTopics.length > 0) {
-        rows.push({
-          topics: rowTopics,
-          size: config.size,
-          offset: config.offset
-        });
+        rows.push({ topics: rowTopics, size: config.size, offset: config.offset });
         currentIndex += config.size;
       }
     });
@@ -56,12 +52,13 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    <div className="min-h-screen w-full flex relative bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-600">
+    // Keep wrapper height at ~70% viewport for the landing layout and center contents
+    <div className="w-full min-h-[70vh] flex relative">
       {/* Left half - Topics */}
       <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
-        <div className="space-y-6 w-full max-w-lg">
+        <div className="space-y-6 w-full max-w-xl">
           {/* Header for left side */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
               <BookOpen className="h-5 w-5 text-amber-400" />
               <h2 className="text-xl font-bold text-white">Populaire onderwerpen</h2>
@@ -95,12 +92,12 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
       </div>
 
-      {/* Vertical white line in the middle */}
-      <div className="w-1 bg-white opacity-80 shadow-2xl"></div>
+      {/* Vertical white line in the middle (70% viewport height) */}
+      <div className="self-center h-[70vh] w-px md:w-[2px] bg-white/90 rounded-full shadow-2xl" />
       
       {/* Right half - Custom input */}
       <div className="w-1/2 flex flex-col justify-center items-center p-8 relative">
-        <div className="space-y-8 w-full max-w-md text-center">
+        <div className="space-y-8 w-full max-w-md text-center mx-auto">
           {/* Custom topic section */}
           <div className="space-y-6">
             <div className="space-y-4">

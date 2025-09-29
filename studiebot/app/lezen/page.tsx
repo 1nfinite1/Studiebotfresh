@@ -189,7 +189,7 @@ export default function LezenPage() {
             </div>
 
             {/* Vertical white line in the middle */}
-            <div className="w-1 bg-white opacity-80 shadow-2xl"></div>
+            <div className="self-stretch w-px md:w-[2px] bg-white opacity-80 rounded-full shadow-2xl" />
             
             {/* Right half - Questions */}
             <div className="w-1/2 flex flex-col justify-start p-8 overflow-y-auto">
