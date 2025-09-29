@@ -56,13 +56,13 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   const topicRows = createPlayfulRows();
 
   return (
-    <div className="grid min-h-[100dvh] grid-cols-2 relative">
-      {/* Vertical divider - horizontal white line in the middle */}
-      <div className="absolute left-1/2 top-0 h-full w-px bg-white/80 transform -translate-x-0.5 z-10 shadow-lg"></div>
+    <div className="min-h-screen flex relative">
+      {/* Vertical white line in the middle */}
+      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white transform -translate-x-0.5 z-10 shadow-lg"></div>
       
-      {/* Left column - Topics */}
-      <div className="flex flex-col justify-center items-center p-6">
-        <div className="space-y-6 w-full max-w-md">
+      {/* Left half - Topics */}
+      <div className="w-1/2 flex flex-col justify-center items-center p-8">
+        <div className="space-y-6 w-full max-w-lg">
           {/* Header for left side */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -98,37 +98,36 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
         </div>
       </div>
 
-      {/* Right column - Custom input (no background panel) */}
-      <div className="flex flex-col justify-center items-center p-6">
-        <div className="w-full max-w-[520px] space-y-6 text-center">
-          {/* Header and input */}
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <label className="text-white font-semibold text-lg whitespace-nowrap">
-              Kies je eigen onderwerp
-            </label>
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
-              <Input
-                type="text"
-                value={customTopic}
-                onChange={(e) => setCustomTopic(e.target.value)}
-                placeholder="bijv. Ruimtevaart"
-                disabled={isGenerating}
-                className="
-                  pl-12 pr-4 py-3 w-full rounded-full
-                  bg-white/15 backdrop-blur-md border border-white/40
-                  text-white placeholder:text-white/60
-                  focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
-                  transition-all duration-300 shadow-md
-                "
-                data-testid="custom-topic-input"
-                onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
-              />
+      {/* Right half - Custom input */}
+      <div className="w-1/2 flex flex-col justify-center items-center p-8">
+        <div className="space-y-8 w-full max-w-md text-center">
+          {/* Custom topic section */}
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <label className="text-white font-semibold text-lg block">
+                Kies je eigen onderwerp
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 z-10" />
+                <Input
+                  type="text"
+                  value={customTopic}
+                  onChange={(e) => setCustomTopic(e.target.value)}
+                  placeholder="bijv. Ruimtevaart"
+                  disabled={isGenerating}
+                  className="
+                    pl-12 pr-4 py-3 w-full rounded-full
+                    bg-white/15 backdrop-blur-md border border-white/40
+                    text-white placeholder:text-white/60
+                    focus:bg-white/25 focus:ring-2 focus:ring-white/60 focus:border-white/60
+                    transition-all duration-300 shadow-md
+                  "
+                  data-testid="custom-topic-input"
+                  onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit(e)}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Button centered below */}
-          <div className="flex justify-center">
             <Button
               onClick={handleCustomSubmit}
               disabled={isGenerating || !customTopic.trim()}
