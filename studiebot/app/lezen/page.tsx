@@ -89,6 +89,7 @@ export default function LezenPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-600">
+      {/* Header */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -117,6 +118,7 @@ export default function LezenPage() {
           )}
         </div>
 
+        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800" data-testid="error-message">
             <p className="font-medium">Er ging iets mis:</p>
@@ -132,24 +134,66 @@ export default function LezenPage() {
           </div>
         )}
 
-        <div className="max-w-4xl mx-auto">
-          {phase === 'topic-selection' && (
-            <TopicPicker
-              onTopicSelect={generateContent}
-              isGenerating={isGenerating}
-            />
-          )}
+        {/* Main Content */}
+        {phase === 'topic-selection' && (
+          <TopicPicker
+            onTopicSelect={generateContent}
+            isGenerating={isGenerating}
+          />
+        )}
 
-          {phase === 'reading-questions' && generatedContent && (
-            <div className="space-y-8" data-testid="reading-questions-section">
-              <div className="text-center text-white mb-6">
-                <h2 className="text-xl font-semibold mb-2">Onderwerp: {selectedTopic}</h2>
-                <p className="text-white/90">Lees eerst de tekst, beantwoord daarna de vragen</p>
+        {phase === 'reading-questions' && generatedContent && (
+          <div className="min-h-screen w-full flex relative" data-testid="reading-questions-section">
+            {/* Left half - Article */}
+            <div className="w-1/2 flex flex-col justify-start p-8 overflow-y-auto">
+              <div className="space-y-6">
+                {/* Topic Header */}
+                <div className="text-center text-white mb-6">
+                  <h2 className="text-xl font-semibold mb-2">Onderwerp: {selectedTopic}</h2>
+                  <p className="text-white/90">Lees eerst de tekst, beantwoord daarna de vragen</p>
+                </div>
+
+                {/* Article with white text on purple background */}
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                  <div className="space-y-4">
+                    {/* Article Title */}
+                    <h1 className="text-2xl font-bold text-white mb-4" data-testid="article-title">
+                      {generatedContent.article.title}
+                    </h1>
+                    
+                    {/* Article Content */}
+                    <div className="space-y-4" data-testid="article-content">
+                      {generatedContent.article.paragraphs.map((paragraph, index) => (
+                        <p 
+                          key={index} 
+                          className="text-white leading-relaxed text-base"
+                          data-testid={`article-paragraph-${index + 1}`}
+                        >
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
+                    
+                    {/* Reading info */}
+                    <div className="mt-6 pt-4 border-t border-white/20">
+                      <div className="flex items-center gap-2 text-sm text-white/80">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span className="font-medium">
+                          HAVO2 niveau • {generatedContent.article.paragraphs.join(' ').split(/\s+/).length} woorden
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <ArticleCard article={generatedContent.article} />
-
-              <div>
+            {/* Vertical white line in the middle */}
+            <div className="w-1 bg-white opacity-80 shadow-2xl"></div>
+            
+            {/* Right half - Questions */}
+            <div className="w-1/2 flex flex-col justify-start p-8 overflow-y-auto">
+              <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white mb-4 text-center">
                   Vragen bij de tekst
                 </h3>
@@ -161,23 +205,24 @@ export default function LezenPage() {
                 />
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {phase === 'results' && generatedContent && (
-            <div className="space-y-6" data-testid="results-section">
-              <div className="text-center text-white mb-6">
-                <h2 className="text-xl font-semibold mb-2">Resultaten voor: {selectedTopic}</h2>
-                <p className="text-white/90">Bekijk hoe je het hebt gedaan</p>
-              </div>
-
-              <ResultSummary
-                questions={generatedContent.questions}
-                answers={answers}
-                onNewSession={startNewSession}
-              />
+        {phase === 'results' && generatedContent && (
+          <div className="space-y-6" data-testid="results-section">
+            {/* Topic Header */}
+            <div className="text-center text-white mb-6">
+              <h2 className="text-xl font-semibold mb-2">Resultaten voor: {selectedTopic}</h2>
+              <p className="text-white/90">Bekijk hoe je het hebt gedaan</p>
             </div>
-          )}
-        </div>
+
+            <ResultSummary
+              questions={generatedContent.questions}
+              answers={answers}
+              onNewSession={startNewSession}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
