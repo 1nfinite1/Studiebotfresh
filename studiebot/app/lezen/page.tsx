@@ -88,12 +88,7 @@ export default function LezenPage() {
           <div className="mb-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800" data-testid="error-message">
             <p className="font-medium">Er ging iets mis:</p>
             <p>{error}</p>
-            <button 
-              onClick={() => setError('')} 
-              className="mt-2 px-3 py-1.5 text-xs border border-white/40 rounded-full text-white bg-white/15 backdrop-blur-md hover:bg-white/25 transition-all duration-300 shadow-md"
-            >
-              Probeer opnieuw
-            </button>
+            <Button onClick={() => setError('')} variant="outline" size="sm" className="mt-2 border-red-300 text-red-800 hover:bg-red-50">Probeer opnieuw</Button>
           </div>
         )}
       </div>
