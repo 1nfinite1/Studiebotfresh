@@ -41,9 +41,21 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
   return (
     // Full-bleed, robust grid using inline gridTemplateColumns to avoid Tailwind JIT issues
     <section
-      className="w-full grid items-center min-h-[70vh] relative"
-      style={{ gridTemplateColumns: 'minmax(0,1fr) 4px minmax(0,1fr)' }}
+      className="w-full grid relative"
+      style={{ gridTemplateColumns: 'minmax(0,1fr) 4px minmax(0,1fr)', minHeight: '70vh' }}
     >
+      {/* Loading mesajı - iki bloğun üstünde ortada */}
+      {isGenerating && (
+        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="text-center text-white/90 animate-pulse">
+            <div className="inline-flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span className="font-medium">Bezig met het maken van jouw artikel en vragen...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left half - Topics */}
       <div className="flex flex-col justify-center items-center p-8">
         <div className="space-y-6 w-full max-w-xl">
@@ -83,7 +95,7 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
           style={{ 
             width: '2px', 
             height: '50vh',
-            backgroundColor: 'rgb(255 255 255 / 0.6)',
+            backgroundColor: 'rgb(160 160 160 / 0.6)',
             position: 'relative',
             zIndex: 9999
           }}
@@ -136,17 +148,6 @@ export function TopicPicker({ onTopicSelect, isGenerating }: TopicPickerProps) {
           </div>
         </div>
       </div>
-
-      {isGenerating && (
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="text-center text-white/90 animate-pulse">
-            <div className="inline-flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span className="font-medium">Bezig met het maken van jouw artikel en vragen...</span>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

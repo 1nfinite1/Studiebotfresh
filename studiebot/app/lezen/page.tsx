@@ -19,6 +19,7 @@ export default function LezenPage() {
   const [answers, setAnswers] = useState<LezenAnswerState>({});
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const generateContent = async (topic: string) => {
     setIsGenerating(true);
@@ -60,6 +61,11 @@ export default function LezenPage() {
     setAnswers({});
     setSelectedTopic('');
     setError('');
+    setCurrentQuestionIndex(0);
+  };
+
+  const handleQuestionChange = (index: number) => {
+    setCurrentQuestionIndex(index);
   };
 
   return (
@@ -85,15 +91,22 @@ export default function LezenPage() {
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800" data-testid="error-message">
-            <p className="font-medium">Er ging iets mis:</p>
-            <p>{error}</p>
-            <button 
-              onClick={() => setError('')} 
-              className="mt-2 px-3 py-1.5 text-xs border border-white/40 rounded-full text-white bg-white/15 backdrop-blur-md hover:bg-white/25 transition-all duration-300 shadow-md"
-            >
-              Probeer opnieuw
-            </button>
+          <div className="mb-4 p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl text-white" data-testid="error-message">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-pink-400 text-sm">⚠</span>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-white mb-2">Er ging iets mis:</p>
+                <p className="text-white/90 mb-4 leading-relaxed">{error}</p>
+                <button 
+                  onClick={() => setError('')} 
+                  className="px-3 py-1.5 text-xs border border-white/40 rounded-full text-white bg-white/15 backdrop-blur-md hover:bg-white/25 transition-all duration-300 shadow-md"
+                >
+                  Probeer opnieuw
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -106,41 +119,70 @@ export default function LezenPage() {
       {/* Reading & Questions (container) */}
       {phase === 'reading-questions' && generatedContent && (
         <div className="container mx-auto px-4 pb-8" data-testid="reading-questions-section">
-          <div className="min-h-[70vh] w-full flex relative">
-            {/* Left half - Article */}
-            <div className="w-1/2 flex flex-col justify-start p-6 overflow-y-auto">
-              <div className="space-y-6">
-                <div className="text-center text-white mb-2">
-                  <h2 className="text-xl font-semibold mb-1">Onderwerp: {selectedTopic}</h2>
-                  <p className="text-white/90">Lees eerst de tekst, beantwoord daarna de vragen</p>
+          {/* BIG MAIN CONTAINER - DYNAMIC HEIGHT */}
+          <div className="w-full max-w-7xl mx-auto bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 p-6 min-h-[600px] flex flex-col relative">
+            {/* Header and Progress Indicator - JUSTIFY BETWEEN */}
+            <div className="flex justify-between items-center text-white mb-4">
+              {/* Header - LEFT SIDE */}
+              <div className="text-left">
+                <h2 className="text-xl font-semibold mb-2">Onderwerp: {selectedTopic}</h2>
+                <p className="text-white/90">Lees eerst de tekst, beantwoord daarna de vragen</p>
+              </div>
+              
+              {/* Progress Indicator - RIGHT SIDE */}
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm ring-1 ring-white/20 w-fit ">
+                <div className="flex items-center justify-between text-white mb-3">
+                  <span className="text-sm font-medium">Quiz Voortgang</span>
                 </div>
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                  <div className="space-y-4">
-                    <h1 className="text-2xl font-bold text-white mb-4" data-testid="article-title">{generatedContent.article.title}</h1>
-                    <div className="space-y-4" data-testid="article-content">
-                      {generatedContent.article.paragraphs.map((paragraph, index) => (
-                        <p key={index} className="text-white leading-relaxed text-base" data-testid={`article-paragraph-${index + 1}`}>{paragraph}</p>
-                      ))}
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-white/20">
-                      <div className="flex items-center gap-2 text-sm text-white/80">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="font-medium">HAVO2 niveau • {generatedContent.article.paragraphs.join(' ').split(/\s+/).length} woorden</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex justify-center space-x-2">
+                  {generatedContent.questions.map((_, index) => {
+                    const isCurrent = index === currentQuestionIndex;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleQuestionChange(index)}
+                        className={`w-8 h-8 rounded-full transition-all duration-300 flex items-center justify-center text-xs font-bold ${
+                          isCurrent
+                            ? 'bg-purple-300 text-white'
+                            : 'bg-white/20 text-white/70 hover:bg-white/30'
+                        }`}
+                        data-testid={`progress-step-${index}`}
+                      >
+                        {index + 1}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-            {/* Vertical white line in the middle */}
-            <div className="self-stretch w-[2px] bg-white opacity-80 rounded-full shadow-2xl" />
+            {/* Left and Right blocks container - RESPONSIVE LAYOUT */}
+            <div className="flex flex-col lg:flex-row gap-6 flex-1">
+              {/* Left side - Article */}
+              <div className="flex-1 bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 min-h-[400px] max-h-[500px] overflow-y-auto">
+                <div className="space-y-4">
+                  <h1 className="text-2xl font-bold text-white mb-4" data-testid="article-title">{generatedContent.article.title}</h1>
+                  <div className="space-y-4" data-testid="article-content">
+                    {generatedContent.article.paragraphs.map((paragraph, index) => (
+                      <p key={index} className="text-white leading-relaxed text-base" data-testid={`article-paragraph-${index + 1}`}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-            {/* Right half - Questions */}
-            <div className="w-1/2 flex flex-col justify-start p-6 overflow-y-auto">
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-white mb-2 text-center">Vragen bij de tekst</h3>
-                <MCQList questions={generatedContent.questions} answers={answers} onAnswerChange={handleAnswerChange} onAllAnswered={handleAllAnswered} />
+              {/* Right side - Questions */}
+              <div className="flex-1 bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 min-h-[400px] max-h-[600px] flex flex-col">
+                <h3 className="text-xl font-bold text-white mb-4 text-center">Vragen bij de tekst</h3>
+                <div className="flex-1 overflow-y-auto overflow-x-visible">
+                  <MCQList 
+                    questions={generatedContent.questions} 
+                    answers={answers} 
+                    onAnswerChange={handleAnswerChange} 
+                    onAllAnswered={handleAllAnswered}
+                    currentQuestionIndex={currentQuestionIndex}
+                    onQuestionChange={handleQuestionChange}
+                  />
+                </div>
               </div>
             </div>
           </div>
