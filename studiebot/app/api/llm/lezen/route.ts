@@ -250,25 +250,53 @@ export async function POST(req: NextRequest) {
 
     // Set default level if not provided
     const level = body.level || 'havo2';
+    const topic = body.topic.trim();
     
-    console.log(`Generating Lezen content for topic: ${body.topic}, level: ${level}`);
+    console.log(`Generating Lezen content for topic: ${topic}, level: ${level}`);
 
-    // Generate content using OpenAI
-    const response = await generateLezenContent({
-      topic: body.topic.trim(),
-      level: level
-    });
+    // Check if LLM is available
+    const client = getClient();
+    if (!client) {
+      console.log('LLM client not available');
+      
+      return jsonErr(503, 'service_unavailable', 'LLM service is not available. Please check your configuration.', {
+        timestamp: new Date().toISOString()
+      }, {
+        'X-Studiebot-LLM': 'disabled',
+        'X-Debug': 'lezen:generate|unavailable'
+      });
+    }
 
-    const headers = {
-      'X-Studiebot-LLM': 'enabled',
-      'X-Debug': 'lezen:generate|success',
-      'X-Topic': body.topic,
-      'X-Level': level,
-      'X-Model': MODEL_LEZEN,
-      'X-Generated-At': new Date().toISOString()
-    };
+    try {
+      // Generate content using OpenAI
+      const response = await generateLezenContent({
+        topic: topic,
+        level: level
+      });
 
-    return jsonOk(response, headers);
+      const headers = {
+        'X-Studiebot-LLM': 'enabled',
+        'X-Debug': 'lezen:generate|success',
+        'X-Topic': topic,
+        'X-Level': level,
+        'X-Model': MODEL_LEZEN,
+        'X-Generated-At': new Date().toISOString()
+      };
+
+      return jsonOk(response, headers);
+
+    } catch (llmError) {
+      console.error('LLM generation failed:', llmError);
+      
+      const errorMessage = llmError instanceof Error ? llmError.message : 'Unknown LLM error';
+      
+      return jsonErr(500, 'generation_failed', `Failed to generate content: ${errorMessage}`, {
+        timestamp: new Date().toISOString()
+      }, {
+        'X-Studiebot-LLM': 'error',
+        'X-Debug': 'lezen:generate|llm_error'
+      });
+    }
 
   } catch (error) {
     console.error('Lezen generate API error:', error);
